@@ -6,6 +6,7 @@ import {
   Alert,
   StyleSheet,
   RefreshControl,
+  TouchableOpacity,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -315,12 +316,16 @@ export const QueueStatusScreen: React.FC = () => {
               대기 중인 상태입니다. 필요시 취소할 수 있습니다.
             </Text>
 
-            <Button
-              title="대기열 취소"
-              onPress={() => handleCancelQueue(queue.id)}
-              variant="outline"
+            <TouchableOpacity
               style={styles.cancelButton}
-            />
+              onPress={() => handleCancelQueue(queue.id)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.cancelButtonContent}>
+                <Text style={styles.cancelButtonIcon}>✕</Text>
+                <Text style={styles.cancelButtonText}>대기열 취소</Text>
+              </View>
+            </TouchableOpacity>
           </View>
         );
       })}
@@ -503,9 +508,18 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   cancelButton: {
-    borderColor: '#FF3B30',
-    borderWidth: 1,
-    minWidth: 120,
+    backgroundColor: '#FF3B30',
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+    shadowColor: '#FF3B30',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    marginTop: 10,
+    alignSelf: 'center',
+    minWidth: 140,
   },
   backButtonContainer: {
     paddingHorizontal: 20,
@@ -573,5 +587,24 @@ const styles = StyleSheet.create({
   registrationDetail: {
     fontSize: 14,
     color: '#8E8E93',
+  },
+  cancelButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    backgroundColor: '#FF3B30',
+  },
+  cancelButtonIcon: {
+    fontSize: 18,
+    color: '#FFFFFF',
+    marginRight: 5,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
   },
 });

@@ -5,6 +5,7 @@ import {
   ScrollView,
   Alert,
   StyleSheet,
+  TouchableOpacity,
 } from 'react-native';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -257,12 +258,16 @@ export const QueueDetailScreen: React.FC = () => {
           대기 중인 상태입니다. 필요시 취소할 수 있습니다.
         </Text>
         
-        <Button
-          title="대기열 취소"
-          onPress={handleCancelQueue}
-          variant="outline"
+        <TouchableOpacity
           style={styles.cancelButton}
-        />
+          onPress={handleCancelQueue}
+          activeOpacity={0.8}
+        >
+          <View style={styles.cancelButtonContent}>
+            <Text style={styles.cancelButtonIcon}>✕</Text>
+            <Text style={styles.cancelButtonText}>대기열 취소</Text>
+          </View>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.backButtonContainer}>
@@ -479,6 +484,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF3B30',
     borderColor: '#FF3B30',
     paddingVertical: 16,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    shadowColor: '#FF3B30',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    marginTop: 10,
+  },
+  cancelButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButtonIcon: {
+    fontSize: 20,
+    marginRight: 8,
+    color: '#FFFFFF',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   backButtonContainer: {
     padding: 20,
