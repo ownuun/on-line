@@ -1,0 +1,99 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 사용자 컬렉션 규칙
+    match /users/{userId} {
+      // 사용자는 자신의 프로필만 읽고 쓸 수 있음
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // 관리자는 모든 사용자 프로필에 접근 가능
+      allow read, write: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // 이벤트 컬렉션 규칙
+    match /events/{eventId} {
+      // 모든 인증된 사용자가 이벤트를 읽을 수 있음
+      allow read: if request.auth != null;
+      
+      // 관리자만 이벤트를 생성, 수정, 삭제할 수 있음
+      allow write: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // 타임슬롯 컬렉션 규칙
+    match /timeSlots/{timeSlotId} {
+      // 모든 인증된 사용자가 타임슬롯을 읽을 수 있음
+      allow read: if request.auth != null;
+      
+      // 관리자만 타임슬롯을 생성, 수정, 삭제할 수 있음
+      allow write: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // 큐 컬렉션 규칙
+    match /queues/{queueId} {
+      // 모든 인증된 사용자가 큐 정보를 읽을 수 있음
+      allow read: if request.auth != null;
+      
+      // 인증된 사용자만 큐에 참여할 수 있음
+      allow create: if request.auth != null;
+      
+      // 사용자는 자신이 생성한 큐 항목만 수정/삭제할 수 있음
+      allow update, delete: if request.auth != null && 
+        resource.data.userId == request.auth.uid;
+    }
+    
+    // 큐 항목 컬렉션 규칙
+    match /queues/{queueId}/entries/{entryId} {
+      // 모든 인증된 사용자가 큐 항목을 읽을 수 있음
+      allow read: if request.auth != null;
+      
+      // 인증된 사용자만 큐에 참여할 수 있음
+      allow create: if request.auth != null;
+      
+      // 사용자는 자신의 큐 항목만 수정/삭제할 수 있음
+      allow update, delete: if request.auth != null && 
+        resource.data.userId == request.auth.uid;
+    }
+    
+    // 알림 컬렉션 규칙
+    match /notifications/{notificationId} {
+      // 사용자는 자신의 알림만 읽고 쓸 수 있음
+      allow read, write: if request.auth != null && 
+        resource.data.userId == request.auth.uid;
+    }
+    
+    // 티켓 컬렉션 규칙
+    match /tickets/{ticketId} {
+      // 사용자는 자신의 티켓만 읽고 쓸 수 있음
+      allow read, write: if request.auth != null && 
+        resource.data.userId == request.auth.uid;
+    }
+    
+    // 얼굴 인식 결과 컬렉션 규칙
+    match /faceRecognitionResults/{resultId} {
+      // 사용자는 자신의 얼굴 인식 결과만 읽을 수 있음
+      allow read: if request.auth != null && 
+        resource.data.userId == request.auth.uid;
+      
+      // 시스템에서만 생성 가능
+      allow create: if request.auth != null;
+      
+      // 수정 불가
+      allow update, delete: if false;
+    }
+    
+    // 수동 검수 대기열 컬렉션 규칙
+    match /manualReviewQueue/{reviewId} {
+      // 관리자만 읽고 쓸 수 있음
+      allow read, write: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // 기본 규칙: 인증된 사용자만 접근 가능
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

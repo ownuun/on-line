@@ -1,0 +1,35 @@
+rules_version = '2';
+
+// Cloud Storage 보안 규칙
+service firebase.storage {
+  match /b/{bucket}/o {
+    // 티켓 이미지 폴더 규칙
+    match /tickets/{userId}/{fileName} {
+      // 사용자는 자신의 티켓 이미지만 업로드/다운로드 가능
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // 파일 크기 제한 (10MB)
+      allow write: if request.resource.size < 10 * 1024 * 1024;
+      
+      // 파일 타입 제한 (이미지만)
+      allow write: if request.resource.contentType.matches('image/.*');
+    }
+    
+    // 프로필 이미지 폴더 규칙
+    match /profiles/{userId}/{fileName} {
+      // 사용자는 자신의 프로필 이미지만 업로드/다운로드 가능
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // 파일 크기 제한 (5MB)
+      allow write: if request.resource.size < 5 * 1024 * 1024;
+      
+      // 파일 타입 제한 (이미지만)
+      allow write: if request.resource.contentType.matches('image/.*');
+    }
+    
+    // 기타 파일에 대한 기본 규칙
+    match /{allPaths=**} {
+      allow read, write: if false; // 기본적으로 모든 접근 차단
+    }
+  }
+}

@@ -1,0 +1,154 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# Technical Requirements Document (TRD)
+
+## 1. Executive Technical Summary
+- **Project Overview**: This project aims to develop a digital online queuing system for concert and festival attendees. The system will allow users to reserve their spot in line two days before the event via a mobile app, receive real-time call notifications on the event day, and facilitate quick and convenient entry through ticket and facial recognition.
+- **Core Technology Stack**: The system will primarily leverage React Native for cross-platform mobile app development, Node.js with Express for the backend API, and MongoDB for data storage. Redis will be used for real-time updates and queue management.
+- **Key Technical Objectives**:
+    - Minimize queuing time: Average on-site wait time below 10 minutes.
+    - Enhance user satisfaction: App rating/survey satisfaction above 4.5/5.
+    - Optimize operational efficiency: Reduce the number of on-site entry staff by 30%.
+- **Critical Technical Assumptions**:
+    - Users possess smartphones with mobile data connectivity.
+    - A manual review process will be available for facial recognition failures.
+    - The system must be scalable to handle potential server load and traffic spikes.
+
+## 2. Tech Stack
+
+| Category             | Technology / Library | Reasoning (Why it's chosen for this project)                                                                             |
+| -------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Mobile App           | React Native         | Cross-platform development for iOS and Android, aligns with MVP scope and team familiarity, faster development cycle.        |
+| Backend Framework    | Node.js with Express | Scalable, non-blocking I/O, suitable for real-time applications, aligns with JavaScript ecosystem for full-stack development. |
+| Database             | MongoDB              | Flexible schema, suitable for handling diverse event data, scalable for handling large user base.                         |
+| Real-time Updates    | Redis                | In-memory data store, fast read/write operations, ideal for real-time queue management and notifications.                |
+| Authentication       | JSON Web Tokens (JWT) | Secure authentication, stateless, widely adopted for API security.                                                       |
+| Push Notifications   | Firebase Cloud Messaging (FCM) / APNs | Reliable push notification delivery across both Android and iOS platforms.                                             |
+| Face Recognition     | Cloud Vision API (e.g., Google Cloud Vision API) | Scalable, readily available, offloads complex processing, reduces development overhead.                                |
+| API Documentation | Swagger / OpenAPI | Industry standard for designing, building, documenting, and consuming RESTful APIs. |
+| Load Balancing | Nginx | Efficiently distributes incoming network traffic across multiple backend servers. |
+| Infrastructure | AWS / GCP / Azure | Scalable cloud infrastructure for hosting the application and database. |
+| Monitoring | Prometheus & Grafana | Real-time monitoring and alerting for application performance and system health. |
+
+## 3. System Architecture Design
+
+### Top-Level building blocks
+- **Mobile App (React Native)**:
+    - *Sub-building blocks*: UI components, state management (Redux or Context API), API client, push notification handler, face recognition module, QR code scanner.
+- **Backend API (Node.js with Express)**:
+    - *Sub-building blocks*: RESTful API endpoints, authentication middleware, queue management logic (Redis), database interaction layer (Mongoose), face recognition API integration, admin console API.
+- **Database (MongoDB)**:
+    - *Sub-building blocks*: Event data storage, user data storage, queue status storage, configuration settings.
+- **Real-time Updates (Redis)**:
+    - *Sub-building blocks*: Queue status updates, notification triggers, session management.
+- **Face Recognition API (Cloud Vision API)**:
+    - *Sub-building blocks*: Image analysis, face detection, comparison with stored user images.
+- **Admin Console**:
+    - *Sub-building blocks*: TO settings, call management, monitoring dashboard.
+
+### Top-Level Component Interaction Diagram
+
+```mermaid
+graph LR
+    A[Mobile App] --> B(Backend API)
+    B --> C{MongoDB}
+    B --> D{Redis}
+    B --> E[Face Recognition API]
+    F[Admin Console] --> B
+```
+
+- **Mobile App to Backend API**: The mobile app communicates with the backend API via HTTP requests for user authentication, event data retrieval, queue registration, and real-time updates.
+- **Backend API to Database**: The backend API interacts with MongoDB to store and retrieve event data, user information, and queue status.
+- **Backend API to Redis**: The backend API uses Redis for real-time queue management, session management, and notification triggers.
+- **Backend API to Face Recognition API**: The backend API uses Face Recognition API for user face verification during the entry process.
+- **Admin Console to Backend API**: The Admin Console communicates with the backend API via HTTP requests for TO settings and call management.
+
+### Code Organization & Convention
+**Domain-Driven Organization Strategy**
+- **Domain Separation**: Organize code by business domains/bounded contexts (e.g., `user`, `event`, `queue`, `notification`, `admin`).
+- **Layer-Based Architecture**: Separate concerns into distinct layers (presentation, business logic, data access, infrastructure).
+- **Feature-Based Modules**: Group related functionality together rather than separating by technical concerns
+- **Shared Components**: Common utilities, types, and reusable components in dedicated shared modules
+
+**Universal File & Folder Structure**
+```
+/
+├── mobile-app/                # React Native mobile application
+│   ├── src/
+│   │   ├── components/       # Reusable UI components
+│   │   ├── screens/          # App screens/views
+│   │   ├── services/         # API client and data fetching
+│   │   ├── utils/            # Utility functions
+│   │   ├── App.js            # Main application component
+│   │   └── ...
+│   ├── android/              # Android-specific code
+│   ├── ios/                  # iOS-specific code
+│   ├── ...
+├── backend-api/             # Node.js backend API
+│   ├── src/
+│   │   ├── models/           # Mongoose models for MongoDB
+│   │   ├── controllers/      # Route handlers and business logic
+│   │   ├── routes/           # API endpoint definitions
+│   │   ├── services/         # Queue management and notification services
+│   │   ├── config/           # Configuration files
+│   │   ├── app.js            # Main application file
+│   │   └── ...
+├── admin-console/           # Admin console application
+│   ├── ...
+├── documentation/           # API documentation (Swagger/OpenAPI)
+├── scripts/                 # Deployment and utility scripts
+├── ...
+```
+
+### Data Flow & Communication Patterns
+- **Client-Server Communication**: The mobile app sends HTTP requests to the backend API for all data operations. The backend API responds with JSON data.
+- **Database Interaction**: The backend API uses Mongoose ORM to interact with MongoDB. Data is stored and retrieved using asynchronous operations.
+- **External Service Integration**: The backend API integrates with the Face Recognition API via HTTP requests. API keys and authentication are managed securely.
+- **Real-time Communication**: Redis Pub/Sub is used for real-time updates. When queue status changes, the backend API publishes messages to Redis channels. The mobile app subscribes to these channels to receive updates.
+- **Data Synchronization**: Data consistency is maintained through transactional operations in MongoDB and optimistic locking strategies where appropriate.
+
+## 4. Performance & Optimization Strategy
+- **Database Indexing**: Optimize MongoDB query performance by creating appropriate indexes on frequently queried fields.
+- **Caching**: Implement caching at various levels (e.g., Redis for frequently accessed data, HTTP caching for static assets) to reduce database load and improve response times.
+- **Connection Pooling**: Use connection pooling for database connections to minimize connection overhead.
+- **Load Balancing**: Distribute traffic across multiple backend API instances using a load balancer (e.g., Nginx) to ensure high availability and scalability.
+
+## 5. Implementation Roadmap & Milestones
+### Phase 1: Foundation (MVP Implementation)
+- **Core Infrastructure**: Set up cloud infrastructure (AWS/GCP/Azure), configure database and Redis instances, deploy basic backend API.
+- **Essential Features**: Implement user authentication, online queue registration, basic push notifications, and ticket upload functionality.
+- **Basic Security**: Implement JWT authentication, input validation, and basic protection against common web vulnerabilities.
+- **Development Setup**: Set up development environment, CI/CD pipeline for automated builds and deployments.
+- **Timeline**: 8 weeks
+
+### Phase 2: Feature Enhancement
+- **Advanced Features**: Implement face recognition integration, real-time queue status updates, admin console for TO settings and call management.
+- **Performance Optimization**: Optimize database queries, implement caching, and configure load balancing.
+- **Enhanced Security**: Implement rate limiting, DDoS protection, and regular security audits.
+- **Monitoring Implementation**: Set up Prometheus and Grafana for real-time monitoring and alerting.
+- **Timeline**: 6 weeks
+
+## 6. Risk Assessment & Mitigation Strategies
+### Technical Risk Analysis
+- **Technology Risks**: Complexity of integrating face recognition API, potential performance issues with real-time updates.
+    - **Mitigation Strategies**: Thoroughly test face recognition integration, optimize Redis configuration, and implement load shedding mechanisms.
+- **Performance Risks**: Scalability issues during peak traffic, database bottlenecks.
+    - **Mitigation Strategies**: Implement auto-scaling for backend API instances, optimize database queries, and use caching.
+- **Security Risks**: Vulnerabilities in authentication and authorization mechanisms, potential for data breaches.
+    - **Mitigation Strategies**: Conduct regular security audits, implement strong password policies, and encrypt sensitive data.
+- **Integration Risks**: Third-party API dependencies and failure points.
+    - **Mitigation Strategies**: Implement fallback mechanisms, monitor API availability, and have alternative solutions ready.
+
+### Project Delivery Risks
+- **Timeline Risks**: Delays in development due to technical challenges or resource constraints.
+    - **Contingency Plans**: Prioritize critical features, allocate additional resources, and adjust project scope if necessary.
+- **Resource Risks**: Lack of skilled developers with experience in React Native, Node.js, and MongoDB.
+    - **Contingency Plans**: Provide training for existing team members, hire external consultants, and outsource development tasks.
+- **Quality Risks**: Code quality issues, lack of thorough testing.
+    - **Contingency Plans**: Implement code reviews, automate testing, and allocate sufficient time for quality assurance.
+- **Deployment Risks**: Issues with production deployment and environment configuration.
+    - **Contingency Plans**: Use infrastructure-as-code tools, automate deployment processes, and have a rollback plan in place.
+

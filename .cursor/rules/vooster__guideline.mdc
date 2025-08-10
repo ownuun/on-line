@@ -1,0 +1,391 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+```markdown
+# Digital Online Queuing System - Code Guidelines
+
+## 1. Project Overview
+
+This project develops a digital online queuing system for concert and festival attendees using React Native for the mobile app, Node.js with Express for the backend API, MongoDB for data storage, and Redis for real-time updates.
+
+Key architectural decisions include a microservice-inspired approach with clear separation of concerns, RESTful API design, and leveraging cloud-based services for scalability and maintainability.
+
+## 2. Core Principles
+
+-   **Maintainability**: Code should be easily understood and modified by any team member.
+-   **Scalability**: The system must be able to handle increasing user load without performance degradation.
+-   **Testability**: Code should be written in a way that facilitates unit and integration testing.
+-   **Security**: Implement secure coding practices to protect user data and prevent vulnerabilities.
+-   **Efficiency**: Code should be optimized for performance and resource utilization.
+
+## 3. Language-Specific Guidelines
+
+### 3.1. JavaScript (React Native & Node.js)
+
+#### 3.1.1. File Organization and Directory Structure
+
+-   **React Native:**
+    ```
+    /src
+    ├── components/         # Reusable UI components
+    ├── screens/            # App screens/views
+    ├── services/          # API client and data fetching
+    ├── utils/             # Utility functions
+    ├── navigation/        # Navigation logic
+    ├── App.js              # Main application component
+    ```
+
+-   **Node.js:**
+    ```
+    /src
+    ├── models/            # Mongoose models for MongoDB
+    ├── controllers/       # Route handlers and business logic
+    ├── routes/            # API endpoint definitions
+    ├── services/          # Business logic and data access
+    ├── config/            # Configuration files
+    ├── middleware/        # Custom middleware
+    ├── utils/             # Utility functions
+    ├── app.js             # Main application file
+    ```
+
+#### 3.1.2. Import/Dependency Management
+
+-   Use `npm` or `yarn` for dependency management.
+-   Explicitly declare all dependencies in `package.json`.
+-   Use semantic versioning (semver) for dependencies.
+-   Avoid wildcard imports (`import * as ...`) to improve readability and reduce namespace pollution.
+-   Organize imports alphabetically within each group (e.g., built-in modules, third-party libraries, local modules).
+
+    ```javascript
+    // MUST: Example of organized imports
+
+    // Built-in modules
+    const fs = require('fs');
+    const path = require('path');
+
+    // Third-party libraries
+    const express = require('express');
+    const mongoose = require('mongoose');
+
+    // Local modules
+    const config = require('./config');
+    const userRoutes = require('./routes/userRoutes');
+    ```
+
+#### 3.1.3. Error Handling Patterns
+
+-   Use `try...catch` blocks for handling synchronous errors.
+-   Use `async/await` with `try...catch` for asynchronous errors.
+-   Implement centralized error handling middleware in Node.js to catch unhandled exceptions.
+-   Log errors with sufficient context (e.g., request ID, user ID, timestamp).
+-   Return meaningful error messages to the client.
+-   Differentiate between operational errors (e.g., invalid user input) and programming errors (e.g., null reference).
+
+    ```javascript
+    // MUST: Example of async/await with try...catch
+
+    async function getUser(userId) {
+        try {
+            const user = await User.findById(userId);
+            if (!user) {
+                throw new Error('User not found');
+            }
+            return user;
+        } catch (error) {
+            console.error('Error fetching user:', error);
+            throw error; // Re-throw the error to be handled by the error middleware
+        }
+    }
+    ```
+
+### 3.2. MongoDB (Mongoose)
+
+#### 3.2.1. Schema Definition
+
+-   Define clear and concise schemas for all data models.
+-   Use appropriate data types for each field.
+-   Define indexes for frequently queried fields to improve performance.
+-   Use timestamps (`createdAt`, `updatedAt`) for tracking data changes.
+-   Use virtuals for computed properties that are not stored in the database.
+
+    ```javascript
+    // MUST: Example of Mongoose schema definition
+
+    const mongoose = require('mongoose');
+
+    const userSchema = new mongoose.Schema({
+        username: { type: String, required: true, unique: true },
+        email: { type: String, required: true, unique: true },
+        password: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now },
+        updatedAt: { type: Date, default: Date.now }
+    });
+
+    userSchema.index({ username: 1 }); // Create an index on the username field
+
+    const User = mongoose.model('User', userSchema);
+
+    module.exports = User;
+    ```
+
+#### 3.2.2. Data Validation
+
+-   Use Mongoose's built-in validation features to ensure data integrity.
+-   Define custom validation functions for complex validation logic.
+-   Handle validation errors gracefully and return meaningful error messages to the client.
+
+    ```javascript
+    // MUST: Example of Mongoose data validation
+
+    const mongoose = require('mongoose');
+
+    const eventSchema = new mongoose.Schema({
+        name: {
+            type: String,
+            required: [true, 'Event name is required'],
+            maxlength: [100, 'Event name cannot exceed 100 characters']
+        },
+        date: {
+            type: Date,
+            required: [true, 'Event date is required'],
+            validate: {
+                validator: function(value) {
+                    return value > Date.now(); // Ensure event date is in the future
+                },
+                message: 'Event date must be in the future'
+            }
+        }
+    });
+
+    const Event = mongoose.model('Event', eventSchema);
+
+    module.exports = Event;
+    ```
+
+### 3.3. Redis
+
+#### 3.3.1. Data Structures
+
+-   Use appropriate Redis data structures (e.g., strings, lists, sets, sorted sets, hashes) for different use cases.
+-   Use strings for simple key-value storage.
+-   Use lists for queues and ordered collections.
+-   Use sets for storing unique values.
+-   Use sorted sets for leaderboards and ranking.
+-   Use hashes for storing objects.
+
+#### 3.3.2. Connection Management
+
+-   Use a connection pool to reuse connections and reduce connection overhead.
+-   Handle connection errors gracefully.
+-   Implement reconnection logic to automatically reconnect to Redis if the connection is lost.
+
+## 4. Code Style Rules
+
+### 4.1. MUST Follow:
+
+-   **Naming Conventions:**
+    -   Use camelCase for variable and function names (e.g., `userName`, `getUserById`).
+    -   Use PascalCase for class and component names (e.g., `User`, `UserProfile`).
+    -   Use SCREAMING_SNAKE_CASE for constants (e.g., `MAX_USERS`).
+    -   Filenames should match the name of the primary export.
+    -   Rationale: Consistent naming improves readability and maintainability.
+
+-   **Indentation:**
+    -   Use 2 spaces for indentation.
+    -   Rationale: Consistent indentation improves readability and reduces visual clutter.
+
+-   **Line Length:**
+    -   Limit line length to 120 characters.
+    -   Rationale: Improves readability and prevents horizontal scrolling.
+
+-   **Comments:**
+    -   Write clear and concise comments to explain complex logic.
+    -   Document all public APIs and functions.
+    -   Use JSDoc syntax for documenting JavaScript code.
+    -   Rationale: Comments help other developers understand the code and its purpose.
+
+-   **Error Handling:**
+    -   Always handle errors gracefully.
+    -   Log errors with sufficient context.
+    -   Return meaningful error messages to the client.
+    -   Rationale: Proper error handling prevents unexpected crashes and provides valuable debugging information.
+
+-   **Asynchronous Operations:**
+    -   Use `async/await` for asynchronous operations.
+    -   Handle errors in asynchronous operations with `try...catch` blocks.
+    -   Rationale: `async/await` makes asynchronous code easier to read and reason about.
+
+-   **Security:**
+    -   Sanitize user input to prevent XSS attacks.
+    -   Use parameterized queries to prevent SQL injection attacks.
+    -   Store passwords securely using bcrypt or similar hashing algorithms.
+    -   Rationale: Security is paramount to protect user data and prevent vulnerabilities.
+
+-   **Testing:**
+    -   Write unit tests for all critical functions and components.
+    -   Write integration tests to ensure that different parts of the system work together correctly.
+    -   Rationale: Testing helps to prevent bugs and ensure that the system works as expected.
+
+### 4.2. MUST NOT Do:
+
+-   **Global Variables:**
+    -   Avoid using global variables.
+    -   Rationale: Global variables can lead to naming conflicts and make it difficult to reason about the code.
+
+    ```javascript
+    // MUST NOT: Example of using a global variable
+
+    // BAD:
+    global.userName = 'John Doe';
+
+    function greetUser() {
+        console.log('Hello, ' + global.userName);
+    }
+    ```
+
+-   **Magic Numbers:**
+    -   Avoid using magic numbers (unexplained numeric literals).
+    -   Define constants for all numeric literals.
+    -   Rationale: Constants make the code more readable and easier to maintain.
+
+    ```javascript
+    // MUST NOT: Example of using a magic number
+
+    // BAD:
+    function calculateArea(radius) {
+        return 3.14 * radius * radius; // What is 3.14?
+    }
+
+    // GOOD:
+    const PI = 3.14;
+    function calculateArea(radius) {
+        return PI * radius * radius;
+    }
+    ```
+
+-   **Nested Callbacks:**
+    -   Avoid deeply nested callbacks (callback hell).
+    -   Use `async/await` or Promises to flatten asynchronous code.
+    -   Rationale: Nested callbacks make the code difficult to read and maintain.
+
+    ```javascript
+    // MUST NOT: Example of nested callbacks
+
+    // BAD:
+    fs.readFile('file1.txt', (err, data1) => {
+        if (err) {
+            console.error(err);
+        } else {
+            fs.readFile('file2.txt', (err, data2) => {
+                if (err) {
+                    console.error(err);
+                } else {
+                    // ... more nested callbacks
+                }
+            });
+        }
+    });
+    ```
+
+-   **Ignoring Errors:**
+    -   Never ignore errors.
+    -   Always handle errors gracefully and log them with sufficient context.
+    -   Rationale: Ignoring errors can lead to unexpected crashes and make it difficult to debug the code.
+
+    ```javascript
+    // MUST NOT: Example of ignoring an error
+
+    // BAD:
+    fs.readFile('file.txt', (err, data) => {
+        // Ignoring the error
+        console.log(data);
+    });
+    ```
+
+-   **Complex Conditional Statements:**
+    -   Avoid overly complex conditional statements.
+    -   Break down complex conditions into smaller, more manageable functions.
+    -   Rationale: Complex conditional statements make the code difficult to read and understand.
+
+    ```javascript
+    // MUST NOT: Example of a complex conditional statement
+
+    // BAD:
+    if (user.age > 18 && user.isVerified && user.hasAcceptedTerms && (user.country === 'US' || user.country === 'CA')) {
+        // ...
+    }
+    ```
+
+-   **Duplicated Code:**
+    -   Avoid duplicating code.
+    -   Extract common logic into reusable functions or components.
+    -   Rationale: Duplicated code makes the code more difficult to maintain and increases the risk of bugs.
+
+    ```javascript
+    // MUST NOT: Example of duplicated code
+
+    // BAD:
+    function processOrder(order) {
+        // ... some logic
+        console.log('Order processed');
+    }
+
+    function processPayment(payment) {
+        // ... same logic as processOrder
+        console.log('Payment processed');
+    }
+    ```
+
+## 5. Architecture Patterns
+
+### 5.1. Component/Module Structure Guidelines
+
+-   **React Native:**
+    -   Use functional components with hooks for state management and side effects.
+    -   Separate UI components from business logic.
+    -   Use a consistent component structure (e.g., `index.js`, `ComponentName.js`, `ComponentName.styles.js`).
+
+-   **Node.js:**
+    -   Use a modular architecture with clear separation of concerns.
+    -   Separate controllers, services, models, and routes into different modules.
+    -   Use dependency injection to decouple modules.
+
+### 5.2. Data Flow Patterns
+
+-   **React Native:**
+    -   Use unidirectional data flow with state managed by Redux or Context API.
+    -   Components should only update state through actions or context updates.
+
+-   **Node.js:**
+    -   Use a request-response cycle for handling API requests.
+    -   Data flows from the client to the controller, then to the service, then to the model, and finally to the database.
+
+### 5.3. State Management Conventions (React Native)
+
+-   Use Redux or Context API for managing application state.
+-   Define clear and concise actions for updating state.
+-   Use reducers to handle state updates in a predictable way.
+-   Use selectors to access state data in a performant way.
+
+### 5.4. API Design Standards
+
+-   Follow RESTful API principles.
+-   Use meaningful and consistent endpoint names.
+-   Use HTTP status codes to indicate the success or failure of a request.
+-   Return JSON data in a consistent format.
+-   Implement pagination for large datasets.
+-   Use versioning for APIs to maintain backward compatibility.
+-   Document APIs using Swagger/OpenAPI.
+
+    ```
+    // MUST: Example of RESTful API endpoint
+
+    GET /users         // Get all users
+    GET /users/:id     // Get a specific user by ID
+    POST /users        // Create a new user
+    PUT /users/:id     // Update an existing user
+    DELETE /users/:id  // Delete a user
+    ```
+```
