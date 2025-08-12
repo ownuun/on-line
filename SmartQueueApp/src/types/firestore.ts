@@ -206,6 +206,8 @@ export interface CompanionRequest {
   id: string;
   userId: string;           // 요청자 ID
   queueId: string;          // 대기열 ID
+  eventId: string;          // 이벤트 ID
+  timeSlotId: string;       // 타임슬롯 ID
   originalQueueNumber: number; // 원래 대기열 번호
   offeredPrice: number;     // 제안 금액
   status: 'pending' | 'matched' | 'completed' | 'cancelled';

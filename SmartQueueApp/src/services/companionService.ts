@@ -34,9 +34,25 @@ export const createCompanionRequest = async (
   try {
     console.log('동행자 요청 생성 시작:', { userId, queueId, originalQueueNumber, offeredPrice });
     
+    // 대기열 정보 조회하여 eventId와 timeSlotId 가져오기
+    const queueRef = doc(db, 'queues', queueId);
+    const queueDoc = await getDoc(queueRef);
+    
+    if (!queueDoc.exists()) {
+      throw new Error('대기열을 찾을 수 없습니다.');
+    }
+    
+    const queueData = queueDoc.data();
+    const eventId = queueData.eventId;
+    const timeSlotId = queueData.timeSlotId;
+    
+    console.log('대기열 정보 조회:', { eventId, timeSlotId });
+    
     const companionRequest: Omit<CompanionRequest, 'id'> = {
       userId,
       queueId,
+      eventId,
+      timeSlotId,
       originalQueueNumber,
       offeredPrice,
       status: 'pending',
@@ -129,9 +145,10 @@ export const findCompanionsInRange = async (
       return [];
     }
     
-    // 대기열 항목들을 조회 (서브컬렉션 사용)
+    // 대기열 항목들을 조회 (메인 컬렉션 사용)
     const q = query(
-      collection(db, 'queues', queueId, 'entries'),
+      collection(db, 'queues'),
+      where('queueId', '==', queueId),
       where('status', '==', 'waiting'),
       where('queueNumber', '>=', minNumber),
       where('queueNumber', '<=', maxNumber)
@@ -206,27 +223,46 @@ export const acceptCompanionRequest = async (
         linkedQueueNumber: linkedNumber,
       });
       
-      // 4. 대기열 번호 연동
-      const requesterEntryRef = doc(db, 'queues', requestData.queueId, 'entries', requestData.userId);
-      const companionEntryRef = doc(db, 'queues', companionQueueId, 'entries', companionUserId);
+      // 4. 대기열 번호 연동 (메인 컬렉션 사용)
+      // 요청자 대기열 찾기
+      const requesterQuery = query(
+        collection(db, 'queues'),
+        where('eventId', '==', requestData.eventId),
+        where('timeSlotId', '==', requestData.timeSlotId),
+        where('userId', '==', requestData.userId)
+      );
+      const requesterSnapshot = await transaction.get(requesterQuery);
       
-      // 요청자 대기열 업데이트
-      transaction.update(requesterEntryRef, {
-        queueNumber: linkedNumber,
-        isCompanionService: true,
-        companionType: 'requester',
-        displayLabel: '',
-        originalQueueNumber: requestData.originalQueueNumber,
-      });
+      // 동행자 대기열 찾기
+      const companionQuery = query(
+        collection(db, 'queues'),
+        where('eventId', '==', requestData.eventId),
+        where('timeSlotId', '==', requestData.timeSlotId),
+        where('userId', '==', companionUserId)
+      );
+      const companionSnapshot = await transaction.get(companionQuery);
       
-      // 동행자 대기열 업데이트
-      transaction.update(companionEntryRef, {
-        queueNumber: linkedNumber,
-        isCompanionService: true,
-        companionType: 'companion',
-        displayLabel: '(동행자)',
-        originalQueueNumber: companionOriginalNumber,
-      });
+      if (!requesterSnapshot.empty) {
+        const requesterDoc = requesterSnapshot.docs[0];
+        transaction.update(requesterDoc.ref, {
+          queueNumber: linkedNumber,
+          isCompanionService: true,
+          companionType: 'requester',
+          displayLabel: '',
+          originalQueueNumber: requestData.originalQueueNumber,
+        });
+      }
+      
+      if (!companionSnapshot.empty) {
+        const companionDoc = companionSnapshot.docs[0];
+        transaction.update(companionDoc.ref, {
+          queueNumber: linkedNumber,
+          isCompanionService: true,
+          companionType: 'companion',
+          displayLabel: '(동행자)',
+          originalQueueNumber: companionOriginalNumber,
+        });
+      }
     });
     
     console.log('동행자 요청 수락 완료:', requestId);
