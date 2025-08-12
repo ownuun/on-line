@@ -555,7 +555,7 @@ export const EventManagementScreen: React.FC = () => {
                </View>
                
                <Text style={styles.timeFormatNote}>
-                 ⏰ 시간은 24시간제로 입력해주세요 (예: 14:30, 19:00)
+                 ⏰ 시간을 자유롭게 입력해주세요 (예: 오전 10시, 오후 2시, 14:30, 19:00 등)
                </Text>
               
               {formData.timeSlots.map((slot, index) => (
@@ -575,47 +575,15 @@ export const EventManagementScreen: React.FC = () => {
                                      <View style={styles.timeSlotInputs}>
                      <TextInput
                        style={[styles.input, styles.timeInput]}
-                       placeholder="시작 시간 (24시간제)"
+                       placeholder="시작 시간"
                        value={slot.startTime}
-                       onChangeText={(text) => {
-                         // 숫자와 콜론만 허용
-                         const cleaned = text.replace(/[^0-9:]/g, '');
-                         
-                         // 자동으로 콜론 추가
-                         let formatted = cleaned;
-                         if (cleaned.length >= 2 && !cleaned.includes(':')) {
-                           formatted = cleaned.slice(0, 2) + ':' + cleaned.slice(2);
-                         }
-                         
-                         // 최대 5자까지만 입력 가능 (HH:MM)
-                         if (formatted.length <= 5) {
-                           updateTimeSlot(index, 'startTime', formatted);
-                         }
-                       }}
-                       keyboardType="numeric"
-                       maxLength={5}
+                       onChangeText={(text) => updateTimeSlot(index, 'startTime', text)}
                      />
                      <TextInput
                        style={[styles.input, styles.timeInput]}
-                       placeholder="종료 시간 (24시간제)"
+                       placeholder="종료 시간"
                        value={slot.endTime}
-                       onChangeText={(text) => {
-                         // 숫자와 콜론만 허용
-                         const cleaned = text.replace(/[^0-9:]/g, '');
-                         
-                         // 자동으로 콜론 추가
-                         let formatted = cleaned;
-                         if (cleaned.length >= 2 && !cleaned.includes(':')) {
-                           formatted = cleaned.slice(0, 2) + ':' + cleaned.slice(2);
-                         }
-                         
-                         // 최대 5자까지만 입력 가능 (HH:MM)
-                         if (formatted.length <= 5) {
-                           updateTimeSlot(index, 'endTime', formatted);
-                         }
-                       }}
-                       keyboardType="numeric"
-                       maxLength={5}
+                       onChangeText={(text) => updateTimeSlot(index, 'endTime', text)}
                      />
                      <TextInput
                        style={[styles.input, styles.capacityInput]}

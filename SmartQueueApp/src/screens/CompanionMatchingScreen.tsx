@@ -543,16 +543,13 @@ const CompanionMatchingScreen: React.FC = () => {
         throw functionError;
       }
        
-       // 목록 새로고침
-       await loadData();
-       
        // 수락된 요청의 상세 정보 가져오기
        const acceptedRequest = await getDoc(doc(db, 'companionRequests', request.id));
        const acceptedData = acceptedRequest.data();
        
        // 연동된 번호 정보 구성
        const originalNumber = queue.queueNumber;
-       const linkedNumber = acceptedData?.linkedQueueNumber || originalNumber;
+       const linkedNumber = acceptedData?.linkedQueueNumber || Math.max(request.originalQueueNumber, originalNumber);
        const isNumberChanged = linkedNumber !== originalNumber;
        
        const message = `동행자 요청을 수락했습니다!\n\n` +
@@ -573,7 +570,11 @@ const CompanionMatchingScreen: React.FC = () => {
          [
            {
              text: '확인',
-             onPress: () => navigation.goBack(),
+             onPress: async () => {
+               // 화면 새로고침 후 뒤로가기
+               await loadData();
+               navigation.goBack();
+             },
            },
          ]
        );
@@ -715,7 +716,7 @@ const CompanionMatchingScreen: React.FC = () => {
                   <Text style={styles.detailLabel}>순번</Text>
                   <View style={styles.queueNumberContainer}>
                     <Text style={styles.detailValue}>
-                      {requesterInfo.originalQueueNumber || queue?.queueNumber} → {requesterInfo.linkedQueueNumber || '연동 중'}번
+                      {requesterInfo.originalQueueNumber || queue?.queueNumber} → {requesterInfo.linkedQueueNumber || Math.max(requesterInfo.originalQueueNumber || 0, queue?.queueNumber || 0)}번
                     </Text>
                   </View>
                 </View>
@@ -792,7 +793,9 @@ const CompanionMatchingScreen: React.FC = () => {
              requests.map((request) => (
                <View key={request.id} style={styles.requestCard}>
                  <View style={styles.requestHeader}>
-                   <Text style={styles.requestNumber}>{request.originalQueueNumber}번</Text>
+                   <Text style={styles.requestNumber}>
+                     {request.originalQueueNumber}번 → {Math.max(request.originalQueueNumber, queue?.queueNumber || 0)}번
+                   </Text>
                    <Text style={styles.requestTime}>{formatTime(request.createdAt)}</Text>
                  </View>
                  
@@ -801,7 +804,7 @@ const CompanionMatchingScreen: React.FC = () => {
                      <Text style={styles.detailLabel}>요청자 번호</Text>
                      <View style={styles.queueNumberContainer}>
                        <Text style={styles.detailValue}>
-                         {request.originalQueueNumber} → {request.linkedQueueNumber || '연동 중'}번
+                         {request.originalQueueNumber}번
                        </Text>
                      </View>
                    </View>
@@ -813,11 +816,17 @@ const CompanionMatchingScreen: React.FC = () => {
                      <Text style={styles.detailLabel}>연동 후 번호</Text>
                      <View style={styles.queueNumberContainer}>
                        <Text style={styles.detailValue}>
-                         {request.linkedQueueNumber ? `${request.linkedQueueNumber}번` : '연동 중'}
+                         {(() => {
+                           const linkedNumber = Math.max(request.originalQueueNumber, queue?.queueNumber || 0);
+                           return `${linkedNumber}번`;
+                         })()}
                        </Text>
-                       {request.linkedQueueNumber && request.linkedQueueNumber !== request.originalQueueNumber && (
-                         <Text style={styles.numberChangeNote}> (뒷번호로 연동)</Text>
-                       )}
+                       {(() => {
+                         const linkedNumber = Math.max(request.originalQueueNumber, queue?.queueNumber || 0);
+                         return linkedNumber !== request.originalQueueNumber ? (
+                           <Text style={styles.numberChangeNote}> (뒷번호로 연동)</Text>
+                         ) : null;
+                       })()}
                      </View>
                    </View>
                  </View>
