@@ -18,6 +18,13 @@ import { EventService } from '../services/eventService';
 import { QueueData, EventData, TimeSlotData } from '../types/firestore';
 import { formatDate } from '../utils/firestoreUtils';
 import { logError, getUserFriendlyErrorMessage } from '../utils/errorUtils';
+import { 
+  collection, 
+  query, 
+  where, 
+  getDocs 
+} from 'firebase/firestore';
+import { db } from '../config/firebase';
 
 type QueueDetailRouteProp = RouteProp<RootStackParamList, 'QueueDetail'>;
 type QueueDetailNavigationProp = StackNavigationProp<RootStackParamList, 'QueueDetail'>;
@@ -33,10 +40,67 @@ export const QueueDetailScreen: React.FC = () => {
   const [timeSlotData, setTimeSlotData] = useState<TimeSlotData | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [isCompanion, setIsCompanion] = useState(false);
+  const [isRequester, setIsRequester] = useState(false);
+  const [isRequesting, setIsRequesting] = useState(false);
 
   useEffect(() => {
     loadQueueDetails();
   }, [queueId]);
+
+  // 동행자 상태 확인
+  const checkCompanionStatus = async (userId: string, queueId: string): Promise<boolean> => {
+    try {
+      const q = query(
+        collection(db, 'companions'),
+        where('userId', '==', userId),
+        where('queueId', '==', queueId),
+        where('status', 'in', ['waiting', 'active'])
+      );
+      
+      const querySnapshot = await getDocs(q);
+      return !querySnapshot.empty;
+    } catch (error) {
+      console.error('QueueDetailScreen: 동행자 상태 확인 실패:', error);
+      return false;
+    }
+  };
+
+  // 요청자 상태 확인 (매칭된 요청이 있는지)
+  const checkRequesterStatus = async (userId: string, queueId: string): Promise<boolean> => {
+    try {
+      const q = query(
+        collection(db, 'companionRequests'),
+        where('userId', '==', userId),
+        where('queueId', '==', queueId),
+        where('status', '==', 'matched')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      return !querySnapshot.empty;
+    } catch (error) {
+      console.error('QueueDetailScreen: 요청자 상태 확인 실패:', error);
+      return false;
+    }
+  };
+
+  // 사용자의 동행자 요청 상태 확인
+  const checkUserRequestStatus = async (userId: string, queueId: string): Promise<boolean> => {
+    try {
+      const requestsQuery = query(
+        collection(db, 'companionRequests'),
+        where('userId', '==', userId),
+        where('queueId', '==', queueId),
+        where('status', '==', 'pending')
+      );
+      
+      const querySnapshot = await getDocs(requestsQuery);
+      return !querySnapshot.empty;
+    } catch (error) {
+      console.error('QueueDetailScreen: 사용자 요청 상태 확인 실패:', error);
+      return false;
+    }
+  };
 
   const loadQueueDetails = async () => {
     if (!user) return;
@@ -67,6 +131,15 @@ export const QueueDetailScreen: React.FC = () => {
       // 타임슬롯 정보 로드
       const timeSlotData = await EventService.getTimeSlotById(queueData.timeSlotId);
       setTimeSlotData(timeSlotData);
+
+      // 동행자 상태 확인
+      const isCompanionStatus = await checkCompanionStatus(user.uid, queueId);
+      const isRequesterStatus = await checkRequesterStatus(user.uid, queueId);
+      const isRequestingStatus = await checkUserRequestStatus(user.uid, queueId);
+
+      setIsCompanion(isCompanionStatus);
+      setIsRequester(isRequesterStatus);
+      setIsRequesting(isRequestingStatus);
     } catch (error) {
       logError('QueueDetailScreen.loadQueueDetails', error);
       Alert.alert('오류', '대기열 정보를 불러오는데 실패했습니다.');
@@ -219,7 +292,14 @@ export const QueueDetailScreen: React.FC = () => {
       {/* 대기열 정보 섹션 */}
       <View style={styles.infoSection}>
         <Text style={styles.infoLabel}>대기열 정보</Text>
-        <Text style={styles.infoDetail}>순번: <Text style={styles.queueNumber}>{queue.queueNumber}번</Text></Text>
+        <Text style={styles.infoDetail}>
+          순번: <Text style={styles.queueNumber}>
+            {queue.isCompanionService && queue.originalQueueNumber !== queue.queueNumber
+              ? `${queue.originalQueueNumber} → ${queue.queueNumber}번`
+              : `${queue.queueNumber}번`
+            }
+          </Text>
+        </Text>
         {queue.estimatedWaitTime && (
           <Text style={styles.infoDetail}>예상 대기 시간: {Math.floor(queue.estimatedWaitTime / 60)}시간 {queue.estimatedWaitTime % 60}분</Text>
         )}
@@ -258,17 +338,19 @@ export const QueueDetailScreen: React.FC = () => {
           대기 중인 상태입니다. 필요시 취소할 수 있습니다.
         </Text>
         
-        {/* 동행자 서비스 요청 버튼 */}
-        <TouchableOpacity
-          style={styles.companionButton}
-          onPress={() => navigation.navigate('CompanionRequest', { queueId })}
-          activeOpacity={0.8}
-        >
-          <View style={styles.companionButtonContent}>
-            <Text style={styles.companionButtonIcon}>👥</Text>
-            <Text style={styles.companionButtonText}>동행자 서비스 요청</Text>
-          </View>
-        </TouchableOpacity>
+        {/* 동행자 서비스 요청 버튼 - 매칭이 성공하지 않은 경우에만 표시 */}
+        {!isCompanion && !isRequester && !isRequesting && (
+          <TouchableOpacity
+            style={styles.companionButton}
+            onPress={() => navigation.navigate('CompanionRequest', { queueId })}
+            activeOpacity={0.8}
+          >
+            <View style={styles.companionButtonContent}>
+              <Text style={styles.companionButtonIcon}>👥</Text>
+              <Text style={styles.companionButtonText}>동행자 서비스 요청</Text>
+            </View>
+          </TouchableOpacity>
+        )}
         
         <TouchableOpacity
           style={styles.cancelButton}

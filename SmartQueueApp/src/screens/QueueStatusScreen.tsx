@@ -279,7 +279,14 @@ export const QueueStatusScreen: React.FC = () => {
               {timeSlotData && (
                 <Text style={styles.queueDetail}>시간대: {timeSlotData.startTime} - {timeSlotData.endTime}</Text>
               )}
-              <Text style={styles.queueDetail}>순번: <Text style={styles.queueNumber}>{queue.queueNumber}번</Text></Text>
+              <Text style={styles.queueDetail}>
+                순번: <Text style={styles.queueNumber}>
+                  {queue.isCompanionService && queue.originalQueueNumber !== queue.queueNumber
+                    ? `${queue.originalQueueNumber} → ${queue.queueNumber}번`
+                    : `${queue.queueNumber}번`
+                  }
+                </Text>
+              </Text>
               {queue.estimatedWaitTime && (
                 <Text style={styles.queueDetail}>예상 대기 시간: {Math.floor(queue.estimatedWaitTime / 60)}시간 {queue.estimatedWaitTime % 60}분</Text>
               )}

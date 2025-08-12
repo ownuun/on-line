@@ -2,7 +2,7 @@ import { doc, updateDoc, getDoc, collection, query, where, getDocs, orderBy, onS
 import { db } from '../config/firebase';
 import { UserProfile } from './authService';
 import { ManualReviewQueue, faceRecognitionService } from './faceRecognitionService';
-import { EventData, TimeSlotData, QueueData } from '../types/firestore';
+import { EventData, TimeSlotData, QueueData, CompanionRequest, Companion } from '../types/firestore';
 
 export class AdminService {
   /**

@@ -5,13 +5,13 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { AdminService } from '../../services/adminService';
 import { authService } from '../../services/authService';
+import { deleteAllCompanionRecords } from '../../services/companionService';
 import { Button } from '../../components/common/Button';
 import { LoadingOverlay } from '../../components/common/LoadingOverlay';
 
@@ -53,7 +53,6 @@ export const AdminDashboardScreen: React.FC = () => {
       setStats(overallStats);
     } catch (error) {
       console.error('대시보드 데이터 로드 오류:', error);
-      Alert.alert('오류', '대시보드 데이터를 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -70,7 +69,18 @@ export const AdminDashboardScreen: React.FC = () => {
       await authService.signOut();
     } catch (error) {
       console.error('로그아웃 오류:', error);
-      Alert.alert('오류', '로그아웃에 실패했습니다.');
+    }
+  };
+
+  const handleDeleteAllCompanionRecords = async () => {
+    try {
+      setLoading(true);
+      await deleteAllCompanionRecords();
+      await loadDashboardData(); // 대시보드 새로고침
+    } catch (error) {
+      console.error('동행자 기록 삭제 오류:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -178,39 +188,53 @@ export const AdminDashboardScreen: React.FC = () => {
         <View style={styles.quickActions}>
           <Text style={styles.sectionTitle}>빠른 액션</Text>
           
-                     <View style={styles.actionButtons}>
-             <Button
-               title="이벤트 관리"
-               onPress={() => {
-                 navigation.navigate('EventManagement' as never);
-               }}
-               style={styles.actionButton}
-             />
-             
-             <Button
-               title="TO 설정 관리"
-               onPress={() => {
-                 navigation.navigate('TOManagement' as never);
-               }}
-               style={styles.actionButton}
-             />
-             
-             <Button
-               title="호출 현황 모니터링"
-               onPress={() => {
-                 navigation.navigate('QueueMonitoring' as never);
-               }}
-               style={styles.actionButton}
-             />
-             
-             <Button
-               title="수동 검수 관리"
-               onPress={() => {
-                 navigation.navigate('ManualReview' as never);
-               }}
-               style={styles.actionButton}
-             />
-           </View>
+          <View style={styles.actionButtons}>
+            <Button
+              title="이벤트 관리"
+              onPress={() => {
+                navigation.navigate('EventManagement' as never);
+              }}
+              style={styles.actionButton}
+            />
+            
+            <Button
+              title="TO 설정 관리"
+              onPress={() => {
+                navigation.navigate('TOManagement' as never);
+              }}
+              style={styles.actionButton}
+            />
+            
+            <Button
+              title="호출 현황 모니터링"
+              onPress={() => {
+                navigation.navigate('QueueMonitoring' as never);
+              }}
+              style={styles.actionButton}
+            />
+            
+            <Button
+              title="수동 검수 관리"
+              onPress={() => {
+                navigation.navigate('ManualReview' as never);
+              }}
+              style={styles.actionButton}
+            />
+          </View>
+        </View>
+
+        {/* 시스템 관리 */}
+        <View style={styles.systemManagement}>
+          <Text style={styles.sectionTitle}>시스템 관리</Text>
+          
+          <View style={styles.actionButtons}>
+            <Button
+              title="동행자 기록 전체 삭제"
+              onPress={handleDeleteAllCompanionRecords}
+              style={styles.dangerButton}
+              variant="outline"
+            />
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -349,5 +373,13 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     backgroundColor: '#007AFF',
+  },
+  systemManagement: {
+    padding: 20,
+    paddingTop: 0,
+  },
+  dangerButton: {
+    borderColor: '#FF3B30',
+    borderWidth: 2,
   },
 });

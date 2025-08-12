@@ -377,7 +377,160 @@ export class QueueService {
       await updateDoc(queueDoc, updateData);
       console.log('QueueService: updateDoc 호출 완료 - 대기열 취소 성공!');
       
-      // 5. 타임슬롯 업데이트 (별도 처리)
+      // 5. 동행자 관련 데이터 정리 (별도 처리)
+      try {
+        console.log('QueueService: 동행자 관련 데이터 정리 시작...');
+        
+        // 5-1. 동행자 요청 삭제 (내가 올린 요청)
+        const companionRequestsQuery = query(
+          collection(db, 'companionRequests'),
+          where('userId', '==', userId),
+          where('queueId', '==', queueId)
+        );
+        const companionRequestsSnapshot = await getDocs(companionRequestsQuery);
+        
+        if (!companionRequestsSnapshot.empty) {
+          console.log(`QueueService: 동행자 요청 ${companionRequestsSnapshot.size}개 삭제 중...`);
+          const deleteRequestPromises = companionRequestsSnapshot.docs.map(async (doc) => {
+            try {
+              await deleteDoc(doc.ref);
+              console.log('QueueService: 동행자 요청 삭제 완료:', doc.id);
+            } catch (error) {
+              console.error('QueueService: 동행자 요청 삭제 실패:', doc.id, error);
+            }
+          });
+          await Promise.all(deleteRequestPromises);
+          console.log('QueueService: 모든 동행자 요청 삭제 완료');
+        } else {
+          console.log('QueueService: 삭제할 동행자 요청이 없음');
+        }
+        
+        // 5-2. 동행자 기록 삭제 (내가 동행자인 경우)
+        const companionsQuery = query(
+          collection(db, 'companions'),
+          where('userId', '==', userId),
+          where('queueId', '==', queueId)
+        );
+        const companionsSnapshot = await getDocs(companionsQuery);
+        
+        if (!companionsSnapshot.empty) {
+          console.log(`QueueService: 동행자 기록 ${companionsSnapshot.size}개 삭제 중...`);
+          const deleteCompanionPromises = companionsSnapshot.docs.map(async (doc) => {
+            try {
+              await deleteDoc(doc.ref);
+              console.log('QueueService: 동행자 기록 삭제 완료:', doc.id);
+            } catch (error) {
+              console.error('QueueService: 동행자 기록 삭제 실패:', doc.id, error);
+            }
+          });
+          await Promise.all(deleteCompanionPromises);
+          console.log('QueueService: 모든 동행자 기록 삭제 완료');
+        } else {
+          console.log('QueueService: 삭제할 동행자 기록이 없음');
+        }
+        
+        // 5-3. 상대방 동행자 데이터 정리
+        console.log('QueueService: 상대방 동행자 데이터 정리 시작...');
+        
+        // 내가 동행자인 경우: 요청자의 요청 상태를 'cancelled'로 변경
+        const myCompanionQuery = query(
+          collection(db, 'companions'),
+          where('userId', '==', userId),
+          where('queueId', '==', queueId)
+        );
+        const myCompanionSnapshot = await getDocs(myCompanionQuery);
+        
+        if (!myCompanionSnapshot.empty) {
+          console.log('QueueService: 내가 동행자인 경우 - 요청자 요청 상태 변경 중...');
+          const myCompanion = myCompanionSnapshot.docs[0];
+          const companionData = myCompanion.data();
+          
+          if (companionData.requestId) {
+            try {
+              const requestRef = doc(db, 'companionRequests', companionData.requestId);
+              await updateDoc(requestRef, {
+                status: 'cancelled',
+                updatedAt: getCurrentTimestamp(),
+              });
+              console.log('QueueService: 요청자 요청 상태를 cancelled로 변경 완료:', companionData.requestId);
+            } catch (error) {
+              console.error('QueueService: 요청자 요청 상태 변경 실패:', error);
+            }
+          }
+        }
+        
+        // 내가 요청자인 경우: 동행자의 동행 기록 삭제
+        const myRequestQuery = query(
+          collection(db, 'companionRequests'),
+          where('userId', '==', userId),
+          where('queueId', '==', queueId),
+          where('status', '==', 'matched')
+        );
+        const myRequestSnapshot = await getDocs(myRequestQuery);
+        
+        if (!myRequestSnapshot.empty) {
+          console.log('QueueService: 내가 요청자인 경우 - 동행자 기록 삭제 중...');
+          const myRequest = myRequestSnapshot.docs[0];
+          const requestData = myRequest.data();
+          
+          if (requestData.companionId) {
+            try {
+              const companionRef = doc(db, 'companions', requestData.companionId);
+              await deleteDoc(companionRef);
+              console.log('QueueService: 동행자 기록 삭제 완료:', requestData.companionId);
+            } catch (error) {
+              console.error('QueueService: 동행자 기록 삭제 실패:', error);
+            }
+          }
+        }
+        
+        // 5-4. 연동된 대기열 복원 (동행자 서비스 사용 중인 경우)
+        if (queue.isCompanionService) {
+          console.log('QueueService: 연동된 대기열 복원 시작...');
+          
+          // 같은 이벤트/타임슬롯의 다른 대기열들 중 연동된 대기열 찾기
+          const linkedQueuesQuery = query(
+            this.queuesCollection,
+            where('eventId', '==', queue.eventId),
+            where('timeSlotId', '==', queue.timeSlotId),
+            where('isCompanionService', '==', true)
+          );
+          const linkedQueuesSnapshot = await getDocs(linkedQueuesQuery);
+          
+          if (!linkedQueuesSnapshot.empty) {
+            console.log(`QueueService: 연동된 대기열 ${linkedQueuesSnapshot.size}개 복원 중...`);
+            const restorePromises = linkedQueuesSnapshot.docs.map(async (doc) => {
+              const linkedQueue = doc.data() as Queue;
+              try {
+                // 원래 대기열 번호로 복원
+                const originalNumber = linkedQueue.originalQueueNumber || linkedQueue.queueNumber;
+                await updateDoc(doc.ref, {
+                  queueNumber: originalNumber,
+                  isCompanionService: false,
+                  companionType: null,
+                  displayLabel: null,
+                  originalQueueNumber: null,
+                  updatedAt: getCurrentTimestamp(),
+                });
+                console.log('QueueService: 연동된 대기열 복원 완료:', doc.id, '->', originalNumber, '번');
+              } catch (error) {
+                console.error('QueueService: 연동된 대기열 복원 실패:', doc.id, error);
+              }
+            });
+            await Promise.all(restorePromises);
+            console.log('QueueService: 모든 연동된 대기열 복원 완료');
+          } else {
+            console.log('QueueService: 복원할 연동된 대기열이 없음');
+          }
+        }
+        
+        console.log('QueueService: 동행자 관련 데이터 정리 완료');
+      } catch (companionError) {
+        console.error('QueueService: 동행자 관련 데이터 정리 실패 (대기열 취소는 성공):', companionError);
+        // 동행자 데이터 정리 실패는 대기열 취소 성공에 영향을 주지 않음
+      }
+      
+      // 6. 타임슬롯 업데이트 (별도 처리)
       try {
         console.log('QueueService: 타임슬롯 업데이트 시작...');
         const timeSlotDoc = doc(this.timeSlotsCollection, queue.timeSlotId);

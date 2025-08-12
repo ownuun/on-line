@@ -5,6 +5,9 @@ import {
   ScrollView,
   Alert,
   StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -15,10 +18,13 @@ import { Button } from '../components/common/Button';
 import { Loader } from '../components/common/Loader';
 import { EventService } from '../services/eventService';
 import { QueueService } from '../services/queueService';
+import { withdrawCompanionService } from '../services/companionService';
 import { useAuth } from '../contexts/AuthContext';
 import { EventData, TimeSlotData, QueueData } from '../types/firestore';
 import { logError, getUserFriendlyErrorMessage } from '../utils/errorUtils';
 import { formatDate } from '../utils/firestoreUtils';
+import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { db } from '../config/firebase';
 
 type QueueScreenNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'Queue'>,
@@ -40,6 +46,11 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [queueLoading, setQueueLoading] = useState(false);
   const [queueTimeSlots, setQueueTimeSlots] = useState<{ [key: string]: TimeSlotData }>({});
+  const [companionStatuses, setCompanionStatuses] = useState<{ [queueId: string]: { isCompanion: boolean; isRequester: boolean; companionInfo?: any; requesterInfo?: any } }>({});
+  const [withdrawingQueueId, setWithdrawingQueueId] = useState<string | null>(null);
+  const [withdrawMessage, setWithdrawMessage] = useState<string>('');
+  const [showWithdrawMessage, setShowWithdrawMessage] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // 이벤트 목록 로드
   const loadEvents = async () => {
@@ -96,12 +107,90 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({ navigation }) => {
       });
       
       setQueueTimeSlots(timeSlotMap);
+      
+      // 동행자 상태 확인
+      await checkCompanionStatuses(queues);
     } catch (error) {
       logError('QueueScreen.loadUserQueues', error);
       Alert.alert('오류', '대기열 정보를 불러오는데 실패했습니다.');
     } finally {
       setQueueLoading(false);
     }
+  };
+
+  // 동행자 상태 확인
+  const checkCompanionStatuses = async (queues: QueueData[] = userQueues) => {
+    if (!user?.uid) return;
+
+    const statuses: { [queueId: string]: { isCompanion: boolean; isRequester: boolean; companionInfo?: any; requesterInfo?: any } } = {};
+
+    for (const queue of queues) {
+      try {
+        // 동행자 상태 확인
+        const companionQuery = query(
+          collection(db, 'companions'),
+          where('userId', '==', user.uid),
+          where('queueId', '==', queue.id),
+          where('status', 'in', ['waiting', 'active'])
+        );
+        const companionSnapshot = await getDocs(companionQuery);
+
+        // 요청자 상태 확인
+        const requesterQuery = query(
+          collection(db, 'companionRequests'),
+          where('userId', '==', user.uid),
+          where('queueId', '==', queue.id),
+          where('status', '==', 'matched')
+        );
+        const requesterSnapshot = await getDocs(requesterQuery);
+
+        let companionInfo = undefined;
+        let requesterInfo = undefined;
+
+        // 동행자 정보 가져오기 (linkedQueueNumber 포함)
+        if (!companionSnapshot.empty) {
+          const companionData = companionSnapshot.docs[0].data();
+          // 동행자 요청에서 linkedQueueNumber 가져오기
+          if (companionData.requestId) {
+            const requestQuery = query(
+              collection(db, 'companionRequests'),
+              where('__name__', '==', companionData.requestId)
+            );
+            const requestSnapshot = await getDocs(requestQuery);
+            if (!requestSnapshot.empty) {
+              const requestData = requestSnapshot.docs[0].data();
+              companionInfo = {
+                ...companionData,
+                linkedQueueNumber: requestData.linkedQueueNumber,
+                originalQueueNumber: companionData.originalQueueNumber,
+              };
+            }
+          }
+        }
+
+        // 요청자 정보 가져오기 (linkedQueueNumber 포함)
+        if (!requesterSnapshot.empty) {
+          const requesterData = requesterSnapshot.docs[0].data();
+          requesterInfo = {
+            ...requesterData,
+            linkedQueueNumber: requesterData.linkedQueueNumber,
+            originalQueueNumber: requesterData.originalQueueNumber,
+          };
+        }
+
+        statuses[queue.id] = {
+          isCompanion: !companionSnapshot.empty,
+          isRequester: !requesterSnapshot.empty,
+          companionInfo,
+          requesterInfo,
+        };
+      } catch (error) {
+        console.error(`동행자 상태 확인 실패 (${queue.id}):`, error);
+        statuses[queue.id] = { isCompanion: false, isRequester: false };
+      }
+    }
+
+    setCompanionStatuses(statuses);
   };
 
   // 초기 데이터 로드
@@ -207,6 +296,52 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({ navigation }) => {
     }
   };
 
+  // 새로고침 함수
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadEvents();
+    loadUserQueues();
+    setRefreshing(false);
+  }, []);
+
+  // 동행자 서비스 철회 처리
+  const handleWithdrawCompanionService = async (queueId: string) => {
+    if (!user) return;
+    
+    try {
+      setWithdrawingQueueId(queueId);
+      setShowWithdrawMessage(false);
+      setWithdrawMessage('');
+      
+      const result = await withdrawCompanionService(user.uid, queueId);
+      
+      if (result.success) {
+        setWithdrawMessage(result.message);
+        setShowWithdrawMessage(true);
+        
+        // 3초 후 메시지 숨기기
+        setTimeout(() => {
+          setShowWithdrawMessage(false);
+          setWithdrawMessage('');
+        }, 3000);
+        
+        // 동행자 상태 새로고침
+        await checkCompanionStatuses();
+      }
+    } catch (error) {
+      console.error('동행자 서비스 철회 실패:', error);
+      setWithdrawMessage('철회 중 오류가 발생했습니다.');
+      setShowWithdrawMessage(true);
+      
+      setTimeout(() => {
+        setShowWithdrawMessage(false);
+        setWithdrawMessage('');
+      }, 3000);
+    } finally {
+      setWithdrawingQueueId(null);
+    }
+  };
+
   // 전체 로딩 상태 (이벤트 로딩 + 대기열 로딩)
   const isFullyLoading = loading || (user && queueLoading);
 
@@ -215,17 +350,23 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({ navigation }) => {
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView 
-        style={styles.scrollView} 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={true}
-        bounces={true}
-      >
-        <View style={styles.header}>
-          <Text style={styles.title}>대기열 등록</Text>
-          <Text style={styles.subtitle}>원하는 이벤트와 시간대를 선택하세요</Text>
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
+      {/* 철회 메시지 표시 */}
+      {showWithdrawMessage && (
+        <View style={styles.withdrawMessageContainer}>
+          <Text style={styles.withdrawMessageText}>{withdrawMessage}</Text>
         </View>
+      )}
+
+      <View style={styles.header}>
+        <Text style={styles.title}>대기열 등록</Text>
+        <Text style={styles.subtitle}>원하는 이벤트와 시간대를 선택하세요</Text>
+      </View>
 
         {/* 현재 등록된 대기열이 있는 경우 */}
         {userQueues.length > 0 && (
@@ -274,7 +415,15 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({ navigation }) => {
                     )}
                     
                     <View style={styles.queueBasicInfo}>
-                      <Text style={styles.queueNumber}>순번: {queue.queueNumber}번</Text>
+                                             <Text style={styles.queueNumber}>
+                         순번: {
+                           (queue.isCompanionService && queue.originalQueueNumber !== queue.queueNumber) ||
+                           (companionStatuses[queue.id] && (companionStatuses[queue.id].isCompanion || companionStatuses[queue.id].isRequester))
+                             ? `${queue.originalQueueNumber || queue.queueNumber} → ${queue.queueNumber}번`
+                             : `${queue.queueNumber}번`
+                         }
+                         {queue.displayLabel && ` ${queue.displayLabel}`}
+                       </Text>
                       <Text style={[styles.queueStatus, { color: queue.status === 'waiting' ? '#FF9500' : queue.status === 'called' ? '#007AFF' : '#34C759' }]}>
                         {queue.status === 'waiting' ? '대기 중' : queue.status === 'called' ? '호출됨' : '입장 완료'}
                       </Text>
@@ -293,6 +442,37 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({ navigation }) => {
                         <Text style={styles.eventDate}>{formatDate(eventData.date)}</Text>
                         <Text style={styles.eventLocation}>{eventData.location}</Text>
                       </View>
+                    )}
+
+                    {/* 동행자 상태 표시 */}
+                    {companionStatuses[queue.id] && (
+                      companionStatuses[queue.id].isCompanion ? (
+                        <View style={styles.companionStatusCard}>
+                          <Text style={styles.companionStatusTitle}>✅ 동행자 매칭 완료</Text>
+                          <Text style={styles.companionStatusText}>
+                            다른 사용자의 동행자로 등록되었습니다.
+                          </Text>
+                                                     <View style={styles.companionInfoRow}>
+                            <Text style={styles.companionInfoLabel}>대기열 번호:</Text>
+                            <Text style={styles.companionInfoValue}>
+                              {queue.originalQueueNumber || queue.queueNumber} → {companionStatuses[queue.id].companionInfo?.linkedQueueNumber || '연동 중'}번
+                            </Text>
+                          </View>
+                        </View>
+                      ) : companionStatuses[queue.id].isRequester ? (
+                        <View style={styles.requesterStatusCard}>
+                          <Text style={styles.requesterStatusTitle}>🎉 동행자 매칭 성공</Text>
+                          <Text style={styles.requesterStatusText}>
+                            동행자 요청이 성공적으로 매칭되었습니다.
+                          </Text>
+                                                     <View style={styles.companionInfoRow}>
+                            <Text style={styles.companionInfoLabel}>대기열 번호:</Text>
+                            <Text style={styles.companionInfoValue}>
+                              {queue.originalQueueNumber || queue.queueNumber} → {companionStatuses[queue.id].requesterInfo?.linkedQueueNumber || '연동 중'}번
+                            </Text>
+                          </View>
+                        </View>
+                      ) : null
                     )}
                   </View>
                   
@@ -364,10 +544,7 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({ navigation }) => {
                           setSelectedEvent(event.id);
                           setSelectedTimeSlot(''); // 이벤트 변경 시 타임슬롯 초기화
                         }}
-                        style={[
-                          styles.selectButton,
-                          ...(selectedEvent === event.id ? [styles.selectedButton] : [])
-                        ]}
+                        style={selectedEvent === event.id ? styles.selectedButton : styles.selectButton}
                         textStyle={selectedEvent === event.id ? styles.selectedButtonText : styles.selectButtonText}
                       />
                     </View>
@@ -399,11 +576,7 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({ navigation }) => {
                                   title={selectedTimeSlot === slot.id ? '선택됨' : '선택'}
                                   onPress={() => setSelectedTimeSlot(slot.id)}
                                   disabled={!isAvailable}
-                                                          style={[
-                          styles.selectButton,
-                          selectedTimeSlot === slot.id && styles.selectedButton,
-                          !isAvailable && styles.disabledButton
-                        ]}
+                                                          style={!isAvailable ? styles.disabledButton : (selectedTimeSlot === slot.id ? styles.selectedButton : styles.selectButton)}
                                   textStyle={selectedTimeSlot === slot.id ? styles.selectedButtonText : styles.selectButtonText}
                                 />
                               </View>
@@ -417,20 +590,19 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({ navigation }) => {
               })
           )}
         </View>
+        
+        {/* 하단 고정 대기열 등록 버튼 */}
+        {selectedEvent && selectedTimeSlot && !userQueues.some(q => q.eventId === selectedEvent) && (
+          <View style={styles.fixedButtonContainer}>
+            <Button
+              title={registering ? "등록 중..." : "대기열 등록하기"}
+              onPress={handleQueueRegistration}
+              disabled={registering}
+              style={styles.registerButton}
+            />
+          </View>
+        )}
       </ScrollView>
-      
-      {/* 하단 고정 대기열 등록 버튼 */}
-      {selectedEvent && selectedTimeSlot && !userQueues.some(q => q.eventId === selectedEvent) && (
-        <View style={styles.fixedButtonContainer}>
-          <Button
-            title={registering ? "등록 중..." : "대기열 등록하기"}
-            onPress={handleQueueRegistration}
-            disabled={registering}
-            style={styles.registerButton}
-          />
-        </View>
-      )}
-    </View>
   );
 };
 
@@ -517,10 +689,7 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
     marginBottom: 16,
   },
-  viewStatusButton: {
-    borderColor: '#007AFF',
-    borderWidth: 1,
-  },
+
   eventContainer: {
     marginBottom: 20,
   },
@@ -631,10 +800,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     marginTop: 12,
   },
-  disabledButton: {
-    backgroundColor: '#E5E5EA',
-    borderColor: '#C7C7CC',
-  },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -654,7 +819,6 @@ const styles = StyleSheet.create({
   testButton: {
     borderColor: '#34C759',
     borderWidth: 1,
-    backgroundColor: '#F0FFF0',
   },
   registeredEventActions: {
     flexDirection: 'row',
@@ -743,6 +907,81 @@ const styles = StyleSheet.create({
     flex: 1,
     borderColor: '#34C759',
     borderWidth: 1,
+  },
+  companionStatusCard: {
     backgroundColor: '#F0FFF0',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#34C759',
+  },
+  companionStatusTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#34C759',
+    marginBottom: 4,
+  },
+  companionStatusText: {
+    fontSize: 13,
+    color: '#34C759',
+  },
+  requesterStatusCard: {
+    backgroundColor: '#FFF0F0',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#FF9500',
+  },
+  requesterStatusTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FF9500',
+    marginBottom: 4,
+  },
+  requesterStatusText: {
+    fontSize: 13,
+    color: '#FF9500',
+  },
+  companionInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.1)',
+  },
+  companionInfoLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  companionInfoValue: {
+    fontSize: 12,
+    color: '#000',
+    fontWeight: '600',
+  },
+  disabledButton: {
+    backgroundColor: '#E5E5EA',
+    borderColor: '#C7C7CC',
+  },
+  withdrawMessageContainer: {
+    backgroundColor: '#007AFF',
+    padding: 12,
+    margin: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  withdrawMessageText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  withdrawButton: {
+    backgroundColor: '#FF3B30',
+    borderColor: '#FF3B30',
   },
 });

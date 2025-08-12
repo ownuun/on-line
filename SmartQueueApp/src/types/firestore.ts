@@ -39,6 +39,11 @@ export interface Queue {
   updatedAt: Timestamp;
   calledAt?: Timestamp;
   enteredAt?: Timestamp;
+  // 동행자 서비스 관련 필드
+  isCompanionService?: boolean;
+  companionType?: 'requester' | 'companion';
+  displayLabel?: string; // '(동행자)' 또는 빈 문자열
+  originalQueueNumber?: number; // 원래 대기열 번호 (동행자 서비스 사용 시)
 }
 
 // 대기열 항목 인터페이스 (서브컬렉션)
@@ -210,7 +215,7 @@ export interface CompanionRequest {
   timeSlotId: string;       // 타임슬롯 ID
   originalQueueNumber: number; // 원래 대기열 번호
   offeredPrice: number;     // 제안 금액
-  status: 'pending' | 'matched' | 'completed' | 'cancelled';
+  status: 'pending' | 'matched' | 'completed' | 'cancelled' | 'withdrawn_by_companion';
   searchRange: number;      // 현재 검색 범위
   createdAt: Timestamp;
   matchedAt?: Timestamp;
