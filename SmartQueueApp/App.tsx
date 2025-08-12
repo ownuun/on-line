@@ -9,6 +9,8 @@ import { MainTabNavigator } from './src/navigation/MainTabNavigator';
 import { AdminNavigator } from './src/navigation/AdminNavigator';
 import { QueueDetailScreen } from './src/screens/QueueDetailScreen';
 import { QueueStatusScreen } from './src/screens/QueueStatusScreen';
+import CompanionRequestScreen from './src/screens/CompanionRequestScreen';
+import CompanionMatchingScreen from './src/screens/CompanionMatchingScreen';
 import { FCMHandler } from './src/services/fcmHandler';
 import { NotificationService } from './src/services/notificationService';
 import { AdminService } from './src/services/adminService';
@@ -38,6 +40,8 @@ const MainStack = () => (
     <Stack.Screen name="MainTabs" component={MainTabNavigator} />
     <Stack.Screen name="QueueDetail" component={QueueDetailScreen} />
     <Stack.Screen name="QueueStatus" component={QueueStatusScreen} />
+    <Stack.Screen name="CompanionRequest" component={CompanionRequestScreen} />
+    <Stack.Screen name="CompanionMatching" component={CompanionMatchingScreen} />
   </Stack.Navigator>
 );
 

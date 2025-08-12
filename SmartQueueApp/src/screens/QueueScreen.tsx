@@ -313,14 +313,24 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({ navigation }) => {
                     <Text style={styles.progressText}>{progressPercentage}%</Text>
                   </View>
                   
-                  <Button
-                    title="상태 자세히 보기"
-                    onPress={() => {
-                      navigation.navigate('QueueDetail', { queueId: queue.id });
-                    }}
-                    variant="outline"
-                    style={styles.viewStatusButton}
-                  />
+                  <View style={styles.queueActionButtons}>
+                    <Button
+                      title="상태 자세히 보기"
+                      onPress={() => {
+                        navigation.navigate('QueueDetail', { queueId: queue.id });
+                      }}
+                      variant="outline"
+                      style={styles.viewStatusButton}
+                    />
+                    <Button
+                      title="동행자 매칭"
+                      onPress={() => {
+                        navigation.navigate('CompanionMatching', { queueId: queue.id });
+                      }}
+                      variant="outline"
+                      style={styles.companionMatchingButton}
+                    />
+                  </View>
                 </View>
               );
             })}
@@ -718,5 +728,21 @@ const styles = StyleSheet.create({
     color: '#000000',
     textAlign: 'right',
     marginTop: 8,
+  },
+  queueActionButtons: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
+  viewStatusButton: {
+    flex: 1,
+    borderColor: '#007AFF',
+    borderWidth: 1,
+  },
+  companionMatchingButton: {
+    flex: 1,
+    borderColor: '#34C759',
+    borderWidth: 1,
+    backgroundColor: '#F0FFF0',
   },
 });

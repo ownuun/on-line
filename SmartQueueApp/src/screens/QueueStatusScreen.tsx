@@ -291,7 +291,7 @@ export const QueueStatusScreen: React.FC = () => {
               <View style={styles.progressBar}>
                 <View style={styles.progressFill} />
               </View>
-              <Text style={styles.progressText}>0%</Text>
+              <Text style={styles.progressText}>20%</Text>
             </View>
 
             {/* 이벤트 정보 */}
@@ -448,6 +448,8 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     borderRadius: 4,
+    width: '20%',
+    backgroundColor: '#007AFF',
   },
   progressText: {
     fontSize: 14,

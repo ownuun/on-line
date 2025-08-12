@@ -27,6 +27,8 @@ export type RootStackParamList = {
   TicketUpload: { eventId: string };
   EventDetail: { eventId: string };
   Settings: undefined;
+  CompanionRequest: { queueId: string };
+  CompanionMatching: { queueId: string };
 };
 
 // 네비게이션 프로퍼티 타입들

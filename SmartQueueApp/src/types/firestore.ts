@@ -52,6 +52,11 @@ export interface QueueEntry {
   updatedAt: Timestamp;
   calledAt?: Timestamp;
   enteredAt?: Timestamp;
+  // 동행자 서비스 관련 필드
+  isCompanionService?: boolean;
+  companionType?: 'requester' | 'companion';
+  displayLabel?: string; // '(동행자)' 또는 빈 문자열
+  originalQueueNumber?: number; // 원래 대기열 번호 (동행자 서비스 사용 시)
 }
 
 // 알림 인터페이스
@@ -194,4 +199,43 @@ export interface TimeSlotSummary {
   availableCount: number;
   isFull: boolean;
   isClosed: boolean;
+}
+
+// 동행자 요청 인터페이스
+export interface CompanionRequest {
+  id: string;
+  userId: string;           // 요청자 ID
+  queueId: string;          // 대기열 ID
+  originalQueueNumber: number; // 원래 대기열 번호
+  offeredPrice: number;     // 제안 금액
+  status: 'pending' | 'matched' | 'completed' | 'cancelled';
+  searchRange: number;      // 현재 검색 범위
+  createdAt: Timestamp;
+  matchedAt?: Timestamp;
+  companionId?: string;     // 매칭된 동행자 ID
+  linkedQueueNumber?: number; // 연동된 대기열 번호
+}
+
+// 동행자 인터페이스
+export interface Companion {
+  id: string;
+  userId: string;           // 동행자 ID
+  requestId: string;        // 요청 ID
+  queueId: string;          // 대기열 ID
+  originalQueueNumber: number; // 원래 대기열 번호
+  status: 'waiting' | 'called' | 'entered' | 'cancelled';
+  earnedAmount: number;     // 획득 금액
+  createdAt: Timestamp;
+  linkedQueueNumber?: number; // 연동된 대기열 번호
+}
+
+// 동행자 요청 데이터 인터페이스 (타임스탬프를 Date로 변환)
+export interface CompanionRequestData extends Omit<CompanionRequest, 'createdAt' | 'matchedAt'> {
+  createdAt: Date;
+  matchedAt?: Date;
+}
+
+// 동행자 데이터 인터페이스 (타임스탬프를 Date로 변환)
+export interface CompanionData extends Omit<Companion, 'createdAt'> {
+  createdAt: Date;
 }

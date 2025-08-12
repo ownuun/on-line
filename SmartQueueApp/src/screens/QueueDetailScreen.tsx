@@ -231,7 +231,7 @@ export const QueueDetailScreen: React.FC = () => {
         <View style={styles.progressBar}>
           <View style={styles.progressFill} />
         </View>
-        <Text style={styles.progressText}>0%</Text>
+        <Text style={styles.progressText}>20%</Text>
       </View>
 
       {/* 이벤트 정보 섹션 */}
@@ -257,6 +257,18 @@ export const QueueDetailScreen: React.FC = () => {
         <Text style={styles.actionDescription}>
           대기 중인 상태입니다. 필요시 취소할 수 있습니다.
         </Text>
+        
+        {/* 동행자 서비스 요청 버튼 */}
+        <TouchableOpacity
+          style={styles.companionButton}
+          onPress={() => navigation.navigate('CompanionRequest', { queueId })}
+          activeOpacity={0.8}
+        >
+          <View style={styles.companionButtonContent}>
+            <Text style={styles.companionButtonIcon}>👥</Text>
+            <Text style={styles.companionButtonText}>동행자 서비스 요청</Text>
+          </View>
+        </TouchableOpacity>
         
         <TouchableOpacity
           style={styles.cancelButton}
@@ -406,7 +418,7 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: '#007AFF',
     borderRadius: 4,
-    width: '0%',
+    width: '20%',
   },
   progressText: {
     fontSize: 14,
@@ -479,6 +491,36 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
     textAlign: 'center',
     marginBottom: 20,
+  },
+  companionButton: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+    paddingVertical: 16,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    marginBottom: 10,
+  },
+  companionButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  companionButtonIcon: {
+    fontSize: 20,
+    marginRight: 8,
+    color: '#FFFFFF',
+  },
+  companionButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   cancelButton: {
     backgroundColor: '#FF3B30',
