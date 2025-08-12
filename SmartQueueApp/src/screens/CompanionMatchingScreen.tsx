@@ -270,21 +270,7 @@ const CompanionMatchingScreen: React.FC = () => {
         </Text>
       </View>
 
-             {/* 테스트 버튼 */}
-       <View style={styles.testButtonContainer}>
-         <TouchableOpacity
-           style={styles.testButton}
-           onPress={() => {
-             console.log('CompanionMatchingScreen: 테스트 버튼 클릭됨');
-             Alert.alert('테스트', '버튼이 정상적으로 작동합니다!');
-           }}
-           activeOpacity={0.6}
-         >
-           <Text style={styles.testButtonText}>테스트 버튼</Text>
-         </TouchableOpacity>
-       </View>
-
-       {/* 뒤로가기 버튼 */}
+             {/* 뒤로가기 버튼 */}
        <View style={styles.backButtonContainer}>
          <Button
            title="뒤로가기"
@@ -483,26 +469,6 @@ const styles = StyleSheet.create({
   backButton: {
     borderColor: '#666',
     borderWidth: 1,
-  },
-  testButtonContainer: {
-    marginBottom: 20,
-  },
-  testButton: {
-    backgroundColor: '#FF9500',
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    shadowColor: '#FF9500',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  testButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
 
