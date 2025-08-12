@@ -74,8 +74,16 @@ const CompanionMatchingScreen: React.FC = () => {
   };
 
   const handleAcceptRequest = async (request: CompanionRequestData) => {
+    console.log('CompanionMatchingScreen: handleAcceptRequest 호출됨', {
+      requestId: request.id,
+      user: user?.uid,
+      queue: queue?.id,
+      queueNumber: queue?.queueNumber
+    });
+
     if (!user || !queue) {
       console.log('CompanionMatchingScreen: 사용자 또는 대기열 정보 없음');
+      Alert.alert('오류', '사용자 또는 대기열 정보가 없습니다.');
       return;
     }
 
@@ -97,6 +105,7 @@ const CompanionMatchingScreen: React.FC = () => {
         {
           text: '수락',
           onPress: async () => {
+            console.log('CompanionMatchingScreen: 수락 버튼 클릭됨');
             try {
               setAcceptingRequestId(request.id);
               
@@ -221,26 +230,30 @@ const CompanionMatchingScreen: React.FC = () => {
                 </View>
               </View>
               
-              <TouchableOpacity
-                style={[
-                  styles.acceptButton,
-                  acceptingRequestId === request.id && styles.acceptButtonDisabled
-                ]}
-                onPress={() => handleAcceptRequest(request)}
-                disabled={acceptingRequestId === request.id}
-                activeOpacity={0.8}
-              >
-                <View style={styles.acceptButtonContent}>
-                  {acceptingRequestId === request.id ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.acceptButtonIcon}>✅</Text>
-                  )}
-                  <Text style={styles.acceptButtonText}>
-                    {acceptingRequestId === request.id ? '수락 중...' : '수락하기'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
+                             <TouchableOpacity
+                 style={[
+                   styles.acceptButton,
+                   acceptingRequestId === request.id && styles.acceptButtonDisabled
+                 ]}
+                 onPress={() => {
+                   console.log('CompanionMatchingScreen: 수락 버튼 터치됨', request.id);
+                   handleAcceptRequest(request);
+                 }}
+                 disabled={acceptingRequestId === request.id}
+                 activeOpacity={0.6}
+                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+               >
+                 <View style={styles.acceptButtonContent}>
+                   {acceptingRequestId === request.id ? (
+                     <ActivityIndicator size="small" color="#FFFFFF" />
+                   ) : (
+                     <Text style={styles.acceptButtonIcon}>✅</Text>
+                   )}
+                   <Text style={styles.acceptButtonText}>
+                     {acceptingRequestId === request.id ? '수락 중...' : '수락하기'}
+                   </Text>
+                 </View>
+               </TouchableOpacity>
             </View>
           ))
         )}
@@ -257,15 +270,29 @@ const CompanionMatchingScreen: React.FC = () => {
         </Text>
       </View>
 
-      {/* 뒤로가기 버튼 */}
-      <View style={styles.backButtonContainer}>
-        <Button
-          title="뒤로가기"
-          onPress={() => navigation.goBack()}
-          variant="outline"
-          style={styles.backButton}
-        />
-      </View>
+             {/* 테스트 버튼 */}
+       <View style={styles.testButtonContainer}>
+         <TouchableOpacity
+           style={styles.testButton}
+           onPress={() => {
+             console.log('CompanionMatchingScreen: 테스트 버튼 클릭됨');
+             Alert.alert('테스트', '버튼이 정상적으로 작동합니다!');
+           }}
+           activeOpacity={0.6}
+         >
+           <Text style={styles.testButtonText}>테스트 버튼</Text>
+         </TouchableOpacity>
+       </View>
+
+       {/* 뒤로가기 버튼 */}
+       <View style={styles.backButtonContainer}>
+         <Button
+           title="뒤로가기"
+           onPress={() => navigation.goBack()}
+           variant="outline"
+           style={styles.backButton}
+         />
+       </View>
     </ScrollView>
   );
 };
@@ -407,13 +434,14 @@ const styles = StyleSheet.create({
   acceptButton: {
     backgroundColor: '#34C759',
     borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     shadowColor: '#34C759',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+    minHeight: 50,
   },
   acceptButtonDisabled: {
     backgroundColor: '#999',
@@ -455,6 +483,26 @@ const styles = StyleSheet.create({
   backButton: {
     borderColor: '#666',
     borderWidth: 1,
+  },
+  testButtonContainer: {
+    marginBottom: 20,
+  },
+  testButton: {
+    backgroundColor: '#FF9500',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    shadowColor: '#FF9500',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  testButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
