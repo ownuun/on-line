@@ -100,7 +100,7 @@ service cloud.firestore {
       allow read, update: if request.auth != null && 
         resource.data.userId == request.auth.uid;
       
-      // 같은 대기열의 다른 사용자들은 pending 상태의 요청을 읽을 수 있음 (매칭을 위해)
+      // 모든 인증된 사용자는 pending 상태의 요청을 읽을 수 있음 (매칭을 위해)
       allow read: if request.auth != null && 
         resource.data.status == 'pending';
     }

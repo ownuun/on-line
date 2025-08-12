@@ -81,11 +81,10 @@ export const getCompanionRequestsByQueue = async (queueId: string): Promise<Comp
   try {
     console.log('동행자 요청 목록 조회 시작:', queueId);
     
+    // 임시로 단순 쿼리 사용 (인덱스 생성 전까지)
     const q = query(
       collection(db, 'companionRequests'),
-      where('queueId', '==', queueId),
-      where('status', '==', 'pending'),
-      orderBy('createdAt', 'asc')
+      where('queueId', '==', queueId)
     );
     
     const querySnapshot = await getDocs(q);
@@ -93,13 +92,19 @@ export const getCompanionRequestsByQueue = async (queueId: string): Promise<Comp
     
     querySnapshot.forEach((doc) => {
       const data = doc.data() as CompanionRequest;
-      requests.push({
-        ...data,
-        id: doc.id,
-        createdAt: data.createdAt.toDate(),
-        matchedAt: data.matchedAt?.toDate(),
-      });
+      // 클라이언트에서 pending 상태 필터링
+      if (data.status === 'pending') {
+        requests.push({
+          ...data,
+          id: doc.id,
+          createdAt: data.createdAt.toDate(),
+          matchedAt: data.matchedAt?.toDate(),
+        });
+      }
     });
+    
+    // 클라이언트에서 정렬
+    requests.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
     
     console.log(`동행자 요청 목록 조회 완료: ${requests.length}개 요청 발견`);
     return requests;
@@ -129,10 +134,9 @@ export const findCompanionsInRange = async (
       return [];
     }
     
-    // 대기열 항목들을 조회 (서브컬렉션 대신 직접 조회)
+    // 대기열 항목들을 조회 (서브컬렉션 사용)
     const q = query(
-      collection(db, 'queues'),
-      where('id', '==', queueId),
+      collection(db, 'queues', queueId, 'entries'),
       where('status', '==', 'waiting'),
       where('queueNumber', '>=', minNumber),
       where('queueNumber', '<=', maxNumber)
@@ -143,8 +147,10 @@ export const findCompanionsInRange = async (
     
     querySnapshot.forEach((doc) => {
       const data = doc.data();
-      // 동행자 서비스를 사용하지 않는 사용자만 필터링
-      if (!data.isCompanionService) {
+      // 클라이언트에서 범위 및 동행자 서비스 필터링
+      if (!data.isCompanionService && 
+          data.queueNumber >= minNumber && 
+          data.queueNumber <= maxNumber) {
         companions.push({
           id: doc.id,
           ...data
@@ -208,11 +214,11 @@ export const acceptCompanionRequest = async (
       });
       
       // 4. 대기열 번호 연동
-      const requesterQueueRef = doc(db, 'queues', requestData.queueId);
-      const companionQueueRef = doc(db, 'queues', companionQueueId);
+      const requesterEntryRef = doc(db, 'queues', requestData.queueId, 'entries', requestData.userId);
+      const companionEntryRef = doc(db, 'queues', companionQueueId, 'entries', companionUserId);
       
       // 요청자 대기열 업데이트
-      transaction.update(requesterQueueRef, {
+      transaction.update(requesterEntryRef, {
         queueNumber: linkedNumber,
         isCompanionService: true,
         companionType: 'requester',
@@ -221,7 +227,7 @@ export const acceptCompanionRequest = async (
       });
       
       // 동행자 대기열 업데이트
-      transaction.update(companionQueueRef, {
+      transaction.update(companionEntryRef, {
         queueNumber: linkedNumber,
         isCompanionService: true,
         companionType: 'companion',

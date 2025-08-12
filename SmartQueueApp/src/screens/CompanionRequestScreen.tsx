@@ -13,7 +13,7 @@ import { RootStackParamList } from '../types/navigation';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { createCompanionRequest, cancelCompanionRequest } from '../services/companionService';
-import { getQueueById } from '../services/queueService';
+import { QueueService } from '../services/queueService';
 import { useAuth } from '../contexts/AuthContext';
 import { QueueData } from '../types/firestore';
 import { logError } from '../utils/errorUtils';
@@ -43,7 +43,7 @@ const CompanionRequestScreen: React.FC = () => {
   const loadQueueInfo = async () => {
     try {
       setLoading(true);
-      const queueData = await getQueueById(queueId);
+      const queueData = await QueueService.getQueueById(queueId);
       if (queueData) {
         setQueue(queueData);
       }

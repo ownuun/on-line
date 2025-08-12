@@ -14,7 +14,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../types/navigation';
 import { Button } from '../components/common/Button';
 import { getCompanionRequestsByQueue, acceptCompanionRequest } from '../services/companionService';
-import { getQueueById } from '../services/queueService';
+import { QueueService } from '../services/queueService';
 import { useAuth } from '../contexts/AuthContext';
 import { CompanionRequestData, QueueData } from '../types/firestore';
 import { logError } from '../utils/errorUtils';
@@ -46,7 +46,7 @@ const CompanionMatchingScreen: React.FC = () => {
       console.log('CompanionMatchingScreen: 데이터 로드 시작, queueId:', queueId);
       
       // 대기열 정보 로드
-      const queueData = await getQueueById(queueId);
+      const queueData = await QueueService.getQueueById(queueId);
       if (queueData) {
         setQueue(queueData);
         console.log('CompanionMatchingScreen: 대기열 정보 로드 성공:', queueData.queueNumber);
@@ -74,7 +74,17 @@ const CompanionMatchingScreen: React.FC = () => {
   };
 
   const handleAcceptRequest = async (request: CompanionRequestData) => {
-    if (!user || !queue) return;
+    if (!user || !queue) {
+      console.log('CompanionMatchingScreen: 사용자 또는 대기열 정보 없음');
+      return;
+    }
+
+    console.log('CompanionMatchingScreen: 동행자 요청 수락 시작:', {
+      requestId: request.id,
+      userId: user.uid,
+      queueId,
+      queueNumber: queue.queueNumber
+    });
 
     Alert.alert(
       '동행자 요청 수락',
@@ -90,6 +100,7 @@ const CompanionMatchingScreen: React.FC = () => {
             try {
               setAcceptingRequestId(request.id);
               
+              console.log('CompanionMatchingScreen: acceptCompanionRequest 호출');
               await acceptCompanionRequest(
                 request.id,
                 user.uid,
@@ -97,6 +108,7 @@ const CompanionMatchingScreen: React.FC = () => {
                 queue.queueNumber
               );
               
+              console.log('CompanionMatchingScreen: 동행자 요청 수락 성공');
               Alert.alert(
                 '수락 완료',
                 '동행자 요청을 수락했습니다. 대기열 번호가 연동되었습니다.',
@@ -108,6 +120,7 @@ const CompanionMatchingScreen: React.FC = () => {
                 ]
               );
             } catch (error) {
+              console.error('CompanionMatchingScreen: 동행자 요청 수락 실패:', error);
               logError('동행자 요청 수락 실패:', error);
               Alert.alert('오류', '요청 수락에 실패했습니다.');
             } finally {
