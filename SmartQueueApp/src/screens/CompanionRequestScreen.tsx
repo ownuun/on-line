@@ -218,22 +218,22 @@ const CompanionRequestScreen: React.FC = () => {
         <Text style={styles.rangeDescription}>
           현재 ±{searchRange}칸 범위에서 동행자를 찾고 있습니다.
         </Text>
-        <Text style={styles.rangeNote}>
-          • 1분 후 ±10칸으로 확장됩니다{'\n'}
-          • 2분 후 ±15칸으로 확장됩니다{'\n'}
-          • 최대 ±50칸까지 확장됩니다
-        </Text>
+        <View>
+          <Text style={styles.rangeNote}>• 1분 후 ±10칸으로 확장됩니다</Text>
+          <Text style={styles.rangeNote}>• 2분 후 ±15칸으로 확장됩니다</Text>
+          <Text style={styles.rangeNote}>• 최대 ±50칸까지 확장됩니다</Text>
+        </View>
       </View>
 
       {/* 서비스 설명 */}
       <View style={styles.serviceInfoSection}>
         <Text style={styles.sectionTitle}>서비스 안내</Text>
-        <Text style={styles.serviceDescription}>
-          • 동행자가 대기열을 대신 서줍니다{'\n'}
-          • 매칭되면 동행자와 같은 번호로 연동됩니다{'\n'}
-          • 동행자는 "(동행자)" 표시로 구분됩니다{'\n'}
-          • 매칭 후에는 요청을 취소할 수 없습니다
-        </Text>
+        <View>
+          <Text style={styles.serviceDescription}>• 동행자가 대기열을 대신 서줍니다</Text>
+          <Text style={styles.serviceDescription}>• 매칭되면 동행자와 같은 번호로 연동됩니다</Text>
+          <Text style={styles.serviceDescription}>• 동행자는 "(동행자)" 표시로 구분됩니다</Text>
+          <Text style={styles.serviceDescription}>• 매칭 후에는 요청을 취소할 수 없습니다</Text>
+        </View>
       </View>
 
       {/* 액션 버튼 */}
