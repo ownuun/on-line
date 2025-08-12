@@ -56,7 +56,10 @@ const CompanionRequestScreen: React.FC = () => {
   };
 
   const handleCreateRequest = async () => {
-    if (!user || !queue) return;
+    if (!user || !queue) {
+      console.log('CompanionRequestScreen: 사용자 또는 대기열 정보 없음');
+      return;
+    }
 
     const price = parseInt(offeredPrice);
     if (isNaN(price) || price < 10000) {
@@ -66,6 +69,13 @@ const CompanionRequestScreen: React.FC = () => {
 
     try {
       setLoading(true);
+      console.log('CompanionRequestScreen: 동행자 요청 생성 시작:', {
+        userId: user.uid,
+        queueId,
+        queueNumber: queue.queueNumber,
+        price
+      });
+      
       const newRequestId = await createCompanionRequest(
         user.uid,
         queueId,
@@ -73,6 +83,7 @@ const CompanionRequestScreen: React.FC = () => {
         price
       );
       
+      console.log('CompanionRequestScreen: 동행자 요청 생성 성공:', newRequestId);
       setRequestId(newRequestId);
       setIsRequestActive(true);
       
@@ -87,6 +98,7 @@ const CompanionRequestScreen: React.FC = () => {
         ]
       );
     } catch (error) {
+      console.error('CompanionRequestScreen: 동행자 요청 생성 실패:', error);
       logError('동행자 요청 생성 실패:', error);
       Alert.alert('오류', '동행자 요청을 생성할 수 없습니다.');
     } finally {

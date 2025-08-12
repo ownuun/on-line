@@ -91,6 +91,30 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
+    // 동행자 요청 컬렉션 규칙
+    match /companionRequests/{requestId} {
+      // 인증된 사용자만 동행자 요청을 생성할 수 있음
+      allow create: if request.auth != null;
+      
+      // 요청자는 자신의 요청을 읽고 수정할 수 있음
+      allow read, update: if request.auth != null && 
+        resource.data.userId == request.auth.uid;
+      
+      // 같은 대기열의 다른 사용자들은 pending 상태의 요청을 읽을 수 있음 (매칭을 위해)
+      allow read: if request.auth != null && 
+        resource.data.status == 'pending';
+    }
+    
+    // 동행자 컬렉션 규칙
+    match /companions/{companionId} {
+      // 인증된 사용자만 동행자 활동을 생성할 수 있음
+      allow create: if request.auth != null;
+      
+      // 동행자는 자신의 활동을 읽고 수정할 수 있음
+      allow read, update: if request.auth != null && 
+        resource.data.userId == request.auth.uid;
+    }
+    
     // 기본 규칙: 인증된 사용자만 접근 가능
     match /{document=**} {
       allow read, write: if request.auth != null;

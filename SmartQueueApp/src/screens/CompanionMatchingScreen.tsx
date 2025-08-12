@@ -43,17 +43,23 @@ const CompanionMatchingScreen: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
+      console.log('CompanionMatchingScreen: 데이터 로드 시작, queueId:', queueId);
       
       // 대기열 정보 로드
       const queueData = await getQueueById(queueId);
       if (queueData) {
         setQueue(queueData);
+        console.log('CompanionMatchingScreen: 대기열 정보 로드 성공:', queueData.queueNumber);
+      } else {
+        console.log('CompanionMatchingScreen: 대기열 정보를 찾을 수 없음');
       }
       
       // 동행자 요청 목록 로드
       const requestsData = await getCompanionRequestsByQueue(queueId);
       setRequests(requestsData);
+      console.log('CompanionMatchingScreen: 동행자 요청 목록 로드 완료:', requestsData.length);
     } catch (error) {
+      console.error('CompanionMatchingScreen: 데이터 로드 실패:', error);
       logError('동행자 매칭 데이터 로드 실패:', error);
       Alert.alert('오류', '데이터를 불러올 수 없습니다.');
     } finally {
