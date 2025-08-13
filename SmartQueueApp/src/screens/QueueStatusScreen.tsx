@@ -287,9 +287,7 @@ export const QueueStatusScreen: React.FC = () => {
                   }
                 </Text>
               </Text>
-              {queue.estimatedWaitTime && (
-                <Text style={styles.queueDetail}>예상 대기 시간: {Math.floor(queue.estimatedWaitTime / 60)}시간 {queue.estimatedWaitTime % 60}분</Text>
-              )}
+              
             </View>
 
             {/* 입장 현황 */}

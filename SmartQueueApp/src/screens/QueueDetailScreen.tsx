@@ -300,9 +300,7 @@ export const QueueDetailScreen: React.FC = () => {
             }
           </Text>
         </Text>
-        {queue.estimatedWaitTime && (
-          <Text style={styles.infoDetail}>예상 대기 시간: {Math.floor(queue.estimatedWaitTime / 60)}시간 {queue.estimatedWaitTime % 60}분</Text>
-        )}
+
       </View>
 
       {/* 입장 현황 섹션 */}

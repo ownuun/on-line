@@ -645,14 +645,7 @@ const CompanionMatchingScreen: React.FC = () => {
               {queue.originalQueueNumber || queue.queueNumber} → {queue.queueNumber}번
             </Text>
           </View>
-          {queue.estimatedWaitTime && (
-            <View style={styles.queueInfo}>
-              <Text style={styles.queueInfoLabel}>예상 대기 시간</Text>
-              <Text style={styles.queueInfoValue}>
-                {Math.floor(queue.estimatedWaitTime / 60)}시간 {queue.estimatedWaitTime % 60}분
-              </Text>
-            </View>
-          )}
+          
         </View>
       )}
 

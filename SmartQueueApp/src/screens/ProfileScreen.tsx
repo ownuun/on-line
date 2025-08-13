@@ -48,7 +48,7 @@ export const ProfileScreen = () => {
       items: [
         { label: '현재 대기열', value: '아이유 콘서트 2024 (10:00-11:00)' },
         { label: '대기 순번', value: '15번' },
-        { label: '예상 대기 시간', value: '약 30분' },
+
       ],
     },
   ];

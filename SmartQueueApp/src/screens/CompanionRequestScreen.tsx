@@ -335,14 +335,7 @@ const CompanionRequestScreen: React.FC = () => {
           <Text style={styles.queueInfoLabel}>대기열 번호</Text>
           <Text style={styles.queueInfoValue}>{queue.queueNumber}번</Text>
         </View>
-        {queue.estimatedWaitTime && (
-          <View style={styles.queueInfo}>
-            <Text style={styles.queueInfoLabel}>예상 대기 시간</Text>
-            <Text style={styles.queueInfoValue}>
-              {Math.floor(queue.estimatedWaitTime / 60)}시간 {queue.estimatedWaitTime % 60}분
-            </Text>
-          </View>
-        )}
+
       </View>
 
       {/* 제안 금액 설정 */}

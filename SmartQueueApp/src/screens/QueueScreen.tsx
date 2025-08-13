@@ -429,11 +429,7 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({ navigation }) => {
                       </Text>
                     </View>
                     
-                    {queue.estimatedWaitTime && (
-                      <Text style={styles.waitTime}>
-                        예상 대기 시간: {Math.floor(queue.estimatedWaitTime / 60)}시간 {queue.estimatedWaitTime % 60}분
-                      </Text>
-                    )}
+                    
                     
                     {/* 이벤트 정보 */}
                     {eventData && (
